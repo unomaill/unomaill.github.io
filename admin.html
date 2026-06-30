@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · CSM Mail Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import {
+    getFirestore, collection, getDocs, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDhyBH6MrDKC_j4m-gOrT3ylW-WgygGEs8",
+    authDomain: "mail-67221.firebaseapp.com",
+    projectId: "mail-67221",
+    storageBucket: "mail-67221.firebasestorage.app",
+    messagingSenderId: "680609475208",
+    appId: "1:680609475208:web:724ccd0377a51cfd214d3d"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  window.__auth = auth;
+  window.__db = db;
+  window.__fb = { signInWithEmailAndPassword, signOut, onAuthStateChanged, collection, getDocs, query, orderBy };
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d12;--surface:#11141c;--surface-2:#161a24;--surface-3:#1c2130;
+  --border:#232838;--border-2:#2c3245;
+  --ink:#eef0f8;--ink-2:#aab0c8;--ink-3:#737a96;--ink-4:#4a5068;
+  --blue:#3b82f6;--blue-light:#16243f;--blue-glow:rgba(59,130,246,.25);
+  --green:#10b981;--green-light:#0e2a22;
+  --red:#ef4444;--red-light:#2a1416;
+  --amber:#f59e0b;
+  --shadow-md:0 4px 20px rgba(0,0,0,.4);--shadow-lg:0 16px 48px rgba(0,0,0,.5);
+  --font-display:'Plus Jakarta Sans',sans-serif;--font-mono:'Space Mono',monospace;
+}
+html{font-size:15px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-display);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(59,130,246,.1) 0%,transparent 60%);}
+
+/* ── login ── */
+.login-wrap{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  box-shadow:var(--shadow-lg);padding:32px 28px}
+.login-card .ic{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+  display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:18px;box-shadow:0 4px 18px rgba(59,130,246,.4)}
+.login-card h1{font-size:19px;font-weight:800;margin-bottom:4px;letter-spacing:-.3px}
+.login-card p{font-size:12.5px;color:var(--ink-3);margin-bottom:24px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+.field input{width:100%;padding:11px 13px;border:1.5px solid var(--border-2);border-radius:10px;background:var(--surface-2);
+  color:var(--ink);font-family:var(--font-mono);font-size:13.5px;outline:none}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
+.login-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;
+  font-size:13.5px;cursor:pointer;margin-top:6px}
+.login-btn:hover{background:#2563eb}
+.login-btn.loading{opacity:.6;pointer-events:none}
+.err-msg{font-size:12px;color:var(--red);margin-top:10px;display:none}
+.err-msg.show{display:block}
+
+/* ── dashboard ── */
+#dash{display:none;position:relative;z-index:1}
+header{position:sticky;top:0;z-index:10;background:rgba(11,13,18,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+nav{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+.brand .ic{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:14px}
+.logout-btn{background:var(--surface-2);border:1px solid var(--border-2);color:var(--ink-2);padding:8px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer}
+.logout-btn:hover{color:var(--red);border-color:var(--red)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px}
+.stat-card .lbl{font-size:11px;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-card .val{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.stat-card .sub{font-size:11px;color:var(--ink-4);margin-top:4px;font-family:var(--font-mono)}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:22px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.panel-h h2{font-size:14.5px;font-weight:800}
+.search-input{padding:8px 12px;border:1.5px solid var(--border-2);border-radius:9px;background:var(--surface-2);
+  color:var(--ink);font-family:var(--font-mono);font-size:12.5px;outline:none;width:220px}
+.search-input:focus{border-color:var(--blue)}
+
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;
+  padding:11px 20px;border-bottom:1px solid var(--border);font-weight:700;white-space:nowrap}
+tbody td{padding:13px 20px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+.id-cell{font-family:var(--font-mono);font-weight:700;color:var(--blue)}
+.email-cell{color:var(--ink-2);font-size:12.5px}
+.time-cell{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
+.badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:10.5px;font-weight:700;font-family:var(--font-mono)}
+.badge.ok{background:var(--green-light);color:var(--green)}
+.empty-row td{text-align:center;padding:40px;color:var(--ink-3);font-size:13px}
+.loading-row td{text-align:center;padding:30px;color:var(--ink-3);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="ic">🔐</div>
+    <h1>Admin Access</h1>
+    <p>CSM Mail Pro — Registration Overview</p>
+    <div class="field">
+      <label>Admin Email</label>
+      <input type="email" id="adminEmail" placeholder="admin@mohasin.bro.bd" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="adminPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="err-msg" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div id="dash">
+  <header>
+    <nav>
+      <div class="brand"><div class="ic">@</div> Admin Overview</div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="lbl">Total Registrations</div>
+        <div class="val" id="statTotal">—</div>
+        <div class="sub">all-time tenants</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">Today</div>
+        <div class="val" id="statToday">—</div>
+        <div class="sub">registered today</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">This Week</div>
+        <div class="val" id="statWeek">—</div>
+        <div class="sub">last 7 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">Mails Sent</div>
+        <div class="val" id="statMails">—</div>
+        <div class="sub">total broadcasts</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h">
+        <h2>Registrations</h2>
+        <input class="search-input" id="searchBox" placeholder="search by id / email..." oninput="renderTable()">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Email ID</th>
+            <th>Google Account</th>
+            <th>Contact</th>
+            <th>Registered</th>
+            <th>Last Login</th>
+            <th>Mails Sent</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="loading-row"><td colspan="6">লোড হচ্ছে…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_EMAIL = 'admin@mohasin.bro.bd';
+let allTenants = [];
+let mailCountByTenant = {};
+
+window.addEventListener('firebase-ready', () => {
+  const { onAuthStateChanged } = window.__fb;
+  onAuthStateChanged(window.__auth, (user) => {
+    if (user && user.email === ADMIN_EMAIL) {
+      document.getElementById('loginWrap').style.display = 'none';
+      document.getElementById('dash').style.display = 'block';
+      loadData();
+    } else {
+      document.getElementById('loginWrap').style.display = 'flex';
+      document.getElementById('dash').style.display = 'none';
+      if (user) doLogout(); // logged in but wrong email
+    }
+  });
+});
+
+async function doLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass  = document.getElementById('adminPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  err.classList.remove('show');
+
+  if (email !== ADMIN_EMAIL) {
+    err.textContent = 'এই email admin access-এর জন্য authorized না।';
+    err.classList.add('show');
+    return;
+  }
+  if (!pass) {
+    err.textContent = 'Password দাও।';
+    err.classList.add('show');
+    return;
+  }
+
+  btn.classList.add('loading');
+  try {
+    const { signInWithEmailAndPassword } = window.__fb;
+    await signInWithEmailAndPassword(window.__auth, email, pass);
+    // onAuthStateChanged handles routing
+  } catch (e) {
+    err.textContent = 'Login ব্যর্থ: ভুল password অথবা account নেই।';
+    err.classList.add('show');
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+async function doLogout() {
+  const { signOut } = window.__fb;
+  await signOut(window.__auth);
+  document.getElementById('adminPass').value = '';
+}
+
+async function loadData() {
+  const { collection, getDocs, query, orderBy } = window.__fb;
+  const db = window.__db;
+
+  try {
+    const tSnap = await getDocs(query(collection(db, 'tenants'), orderBy('createdAt', 'desc')));
+    allTenants = [];
+    tSnap.forEach(d => allTenants.push(d.data()));
+  } catch (e) {
+    // fallback if createdAt index/order fails
+    const tSnap = await getDocs(collection(db, 'tenants'));
+    allTenants = [];
+    tSnap.forEach(d => allTenants.push(d.data()));
+  }
+
+  try {
+    const bSnap = await getDocs(collection(db, 'broadcasts'));
+    mailCountByTenant = {};
+    let total = 0;
+    bSnap.forEach(d => {
+      const t = d.data().tenantId;
+      if (t) mailCountByTenant[t] = (mailCountByTenant[t] || 0) + 1;
+      total++;
+    });
+    document.getElementById('statMails').textContent = total;
+  } catch (e) {
+    document.getElementById('statMails').textContent = '0';
+  }
+
+  computeStats();
+  renderTable();
+}
+
+function computeStats() {
+  document.getElementById('statTotal').textContent = allTenants.length;
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startWeek = new Date(now - 7*86400000);
+
+  let today = 0, week = 0;
+  allTenants.forEach(t => {
+    const d = toDate(t.createdAt);
+    if (!d) return;
+    if (d >= startToday) today++;
+    if (d >= startWeek) week++;
+  });
+  document.getElementById('statToday').textContent = today;
+  document.getElementById('statWeek').textContent = week;
+}
+
+function toDate(ts) {
+  if (!ts) return null;
+  return ts.toDate ? ts.toDate() : new Date(ts);
+}
+
+function fmtDate(ts) {
+  const d = toDate(ts);
+  if (!d) return '—';
+  return d.toLocaleDateString([], {day:'numeric', month:'short', year:'numeric'}) + ' · ' +
+         d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderTable() {
+  const term = document.getElementById('searchBox').value.toLowerCase().trim();
+  const body = document.getElementById('tableBody');
+
+  const filtered = allTenants.filter(t => {
+    if (!term) return true;
+    return (t.id||'').toLowerCase().includes(term) ||
+           (t.email||'').toLowerCase().includes(term) ||
+           (t.ownerGoogleEmail||'').toLowerCase().includes(term);
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="6">কোনো registration পাওয়া যায়নি।</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(t => `
+    <tr>
+      <td class="id-cell">${esc(t.email || (t.id+'@uno.pro.bd'))}</td>
+      <td class="email-cell">${esc(t.ownerGoogleEmail || '—')}</td>
+      <td class="email-cell">${esc(t.contactInfo || '—')}</td>
+      <td class="time-cell">${fmtDate(t.createdAt)}</td>
+      <td class="time-cell">${fmtDate(t.lastLogin)}</td>
+      <td><span class="badge ok">${mailCountByTenant[t.id] || 0} sent</span></td>
+    </tr>
+  `).join('');
+}
+</script>
+</body>
+</html>

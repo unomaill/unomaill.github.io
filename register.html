@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Your Email · @uno.pro.bd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FIREBASE MODULE — Auth (Google) + Firestore
+     ═══════════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, query, collection, where, getDocs,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  // ── Same Firebase project যেটা CSM Mail ব্যবহার করে ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyDhyBH6MrDKC_j4m-gOrT3ylW-WgygGEs8",
+    authDomain: "mail-67221.firebaseapp.com",
+    projectId: "mail-67221",
+    storageBucket: "mail-67221.firebasestorage.app",
+    messagingSenderId: "680609475208",
+    appId: "1:680609475208:web:724ccd0377a51cfd214d3d"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  window.__auth = auth;
+  window.__db = db;
+  window.__fb = {
+    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+    doc, getDoc, setDoc, query, collection, where, getDocs, serverTimestamp,
+    provider
+  };
+
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0f2f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fc;
+  --surface-3: #eef0f8;
+  --border: #e2e5f0;
+  --border-2: #d0d4e8;
+  --ink: #0f1117;
+  --ink-2: #3d4258;
+  --ink-3: #8890a8;
+  --ink-4: #b8bdd0;
+  --blue: #2563eb;
+  --blue-light: #eff4ff;
+  --blue-glow: rgba(37,99,235,0.15);
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --shadow-sm: 0 1px 3px rgba(15,17,23,0.06), 0 1px 2px rgba(15,17,23,0.04);
+  --shadow-md: 0 4px 16px rgba(15,17,23,0.08), 0 2px 6px rgba(15,17,23,0.05);
+  --shadow-lg: 0 12px 40px rgba(15,17,23,0.12), 0 4px 16px rgba(15,17,23,0.08);
+  --shadow-xl: 0 24px 64px rgba(15,17,23,0.18), 0 8px 24px rgba(15,17,23,0.1);
+  --r: 14px;
+  --r-sm: 8px;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+html { font-size: 15px; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(37,99,235,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(5,150,105,0.05) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  padding: 36px 30px;
+  animation: pop 0.35s cubic-bezier(0.34,1.4,0.64,1);
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+}
+.logo-icon svg { width: 22px; height: 22px; color: #fff; }
+.logo-text .top { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+.logo-text .bot {
+  font-size: 10px; font-weight: 600; color: var(--ink-3);
+  letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--font-mono);
+}
+
+.step { display: none; }
+.step.active { display: block; animation: fadein 0.25s ease; }
+@keyframes fadein { from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+.title { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 6px; }
+.sub { font-size: 13.5px; color: var(--ink-3); line-height: 1.5; margin-bottom: 24px; }
+
+/* ── Google button ── */
+.google-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-2);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 14.5px; font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.google-btn:hover { border-color: var(--blue); box-shadow: 0 4px 16px var(--blue-glow); transform: translateY(-1px); }
+.google-btn:active { transform: scale(0.98); }
+.google-btn.loading { pointer-events: none; opacity: 0.7; }
+.google-btn svg { width: 19px; height: 19px; flex-shrink: 0; }
+
+/* ── account chip (after google sign-in) ── */
+.acct-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.acct-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  flex-shrink: 0; object-fit: cover;
+  background: var(--blue-light);
+}
+.acct-meta { flex: 1; min-width: 0; }
+.acct-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.acct-email { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-out {
+  font-size: 11px; font-family: var(--font-mono); color: var(--ink-3);
+  background: none; border: none; cursor: pointer; flex-shrink: 0;
+  padding: 4px 6px; border-radius: 6px;
+}
+.acct-out:hover { color: var(--red); background: var(--red-light); }
+
+/* ── fields ── */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--ink-2);
+  margin-bottom: 7px; letter-spacing: 0.2px;
+}
+.id-input-wrap {
+  display: flex; align-items: stretch;
+  border: 1.5px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--surface);
+}
+.id-input-wrap:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.id-input-wrap.err { border-color: var(--red); }
+.id-input-wrap.ok { border-color: var(--green); }
+
+.id-input-wrap input {
+  flex: 1; min-width: 0;
+  border: none; outline: none;
+  padding: 12px 4px 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  background: transparent;
+  color: var(--ink);
+}
+.id-domain {
+  display: flex; align-items: center;
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-3);
+  background: var(--surface-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.field input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-2);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--surface);
+  color: var(--ink);
+}
+.field input[type="text"]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+
+.hint { font-size: 11.5px; color: var(--ink-4); margin-top: 6px; line-height: 1.4; }
+.hint.err { color: var(--red); font-weight: 600; }
+.hint.ok { color: var(--green); font-weight: 600; }
+.hint.checking { color: var(--ink-3); }
+
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: var(--blue);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 14.5px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  margin-top: 6px;
+}
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled { background: var(--ink-4); cursor: not-allowed; opacity: 0.7; }
+.btn-primary.loading { color: transparent; }
+.btn-primary.loading::after {
+  content: '';
+  position: absolute; top: 50%; left: 50%;
+  width: 16px; height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.alert {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 12.5px; line-height: 1.5;
+  margin-bottom: 18px;
+}
+.alert-err { background: var(--red-light); color: var(--red); }
+.alert-ok  { background: var(--green-light); color: var(--green); }
+
+/* ── success screen ── */
+.success-box { text-align: center; padding: 8px 0 4px; }
+.success-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 18px;
+  background: var(--green-light);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.success-icon svg { width: 30px; height: 30px; color: var(--green); }
+.success-id {
+  font-family: var(--font-mono);
+  font-size: 17px; font-weight: 700;
+  color: var(--blue);
+  background: var(--blue-light);
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin: 16px 0;
+  word-break: break-all;
+}
+.copy-btn {
+  width: 100%; padding: 11px;
+  border: 1.5px solid var(--border-2);
+  background: var(--surface);
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+.back-link {
+  display: block;
+  text-align: center;
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  cursor: pointer;
+  background: none; border: none;
+  font-family: var(--font-display);
+}
+.back-link:hover { color: var(--blue); }
+
+.skeleton {
+  display: flex; align-items: center; justify-content: center;
+  padding: 30px 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  gap: 10px;
+}
+.dot-spin {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border-2);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="logo">
+    <div class="logo-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="top">Get Your Email ID</div>
+      <div class="bot">@uno.pro.bd</div>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 0 — booting / checking session ═══ -->
+  <div class="step active" id="stepBoot">
+    <div class="skeleton"><div class="dot-spin"></div> লোড হচ্ছে…</div>
+  </div>
+
+  <!-- ═══ STEP 1 — Google Sign-In ═══ -->
+  <div class="step" id="stepGoogle">
+    <div class="title">শুরু করো Google দিয়ে</div>
+    <div class="sub">প্রথমে Google দিয়ে সাইন-ইন করো — এটা থেকে তোমার রিয়েল ইমেইল ভেরিফাই করা হবে। এরপর নিজের নাম বেছে নিতে পারবে।</div>
+
+    <button class="google-btn" id="googleBtn" onclick="handleGoogleSignIn()">
+      <svg viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+      </svg>
+      Sign in with Google
+    </button>
+  </div>
+
+  <!-- ═══ STEP 2 — choose name / register ═══ -->
+  <div class="step" id="stepRegister">
+    <div class="acct-chip" id="acctChip"></div>
+
+    <div class="title" id="regTitle">নিজের নাম বেছে নাও</div>
+    <div class="sub" id="regSub">এই নামটাই হবে তোমার ইমেইল আইডি। শুধু lowercase letters, numbers, এবং dot/dash/underscore — স্পেস চলবে না।</div>
+
+    <div id="regAlertSlot"></div>
+
+    <div class="field">
+      <label>তোমার Email ID</label>
+      <div class="id-input-wrap" id="idWrap">
+        <input type="text" id="nameInput" placeholder="yourname" autocomplete="off" spellcheck="false"
+               oninput="onNameInput()" onkeydown="if(event.key==='Enter'){document.getElementById('contactInput').focus()}">
+        <span class="id-domain">@uno.pro.bd</span>
+      </div>
+      <div class="hint" id="nameHint">কমপক্ষে ৩ অক্ষর। যেমন: rahim, csm.mohasin, dev_zafar</div>
+    </div>
+
+    <div class="field">
+      <label>যোগাযোগের তথ্য (Short Contact Info)</label>
+      <input type="text" id="contactInput" placeholder="ফোন নম্বর / Facebook ইউজারনেম / অন্য পরিচিতি" autocomplete="off"
+             onkeydown="if(event.key==='Enter')doRegisterSubmit()">
+      <div class="hint">যেকোনো একটা যোগাযোগের মাধ্যম দাও — যাচাইয়ের জন্য রাখা হবে।</div>
+    </div>
+
+    <button class="btn-primary" id="submitBtn" onclick="doRegisterSubmit()">Register &amp; Get My Email</button>
+    <button class="back-link" onclick="handleSignOut()">↺ ভিন্ন Google অ্যাকাউন্ট দিয়ে সাইন-ইন করো</button>
+  </div>
+
+  <!-- ═══ STEP 3 — already registered → show their id ═══ -->
+  <div class="step" id="stepExisting">
+    <div class="acct-chip" id="acctChipExisting"></div>
+    <div class="success-box">
+      <div class="success-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <div class="title" style="margin-bottom:2px;">তুমি আগেই রেজিস্টার করা আছো</div>
+      <div class="sub" style="margin-bottom:0;">এই Google অ্যাকাউন্টের সাথে যুক্ত আইডি:</div>
+      <div class="success-id" id="existingId"></div>
+      <button class="copy-btn" onclick="copyId('existingId')">📋 আইডি কপি করো</button>
+      <div class="hint" style="text-align:center;margin-top:10px;">↻ তোমার মেইল প্যানেলে নিয়ে যাওয়া হচ্ছে…</div>
+    </div>
+    <button class="back-link" onclick="handleSignOut()">↺ ভিন্ন Google অ্যাকাউন্ট দিয়ে সাইন-ইন করো</button>
+  </div>
+
+  <!-- ═══ STEP 4 — success ═══ -->
+  <div class="step" id="stepDone">
+    <div class="success-box">
+      <div class="success-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <div class="title">রেজিস্ট্রেশন সম্পন্ন! 🎉</div>
+      <div class="sub" style="margin-bottom:0;">তোমার নতুন ইমেইল আইডি:</div>
+      <div class="success-id" id="doneId"></div>
+      <button class="copy-btn" onclick="copyId('doneId')">📋 আইডি কপি করো</button>
+      <div class="hint" style="text-align:center;margin-top:10px;">↻ তোমার মেইল প্যানেলে নিয়ে যাওয়া হচ্ছে…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     ▓▓▓  REGISTRATION LOGIC  ▓▓▓
+     ══════════════════════════════════════════════════════════════════════
+
+     FLOW:
+     1. Google দিয়ে sign-in → real email ভেরিফাই হয়
+     2. Firestore-এ চেক: এই UID আগে কোনো নাম রেজিস্টার করেছে কিনা
+        - করে থাকলে → সরাসরি সেই আইডি দেখানো হয় (Step 3)
+        - না করলে → নাম বেছে নেওয়ার ফর্ম (Step 2)
+     3. নাম availability realtime চেক হয় (debounced) — তিনটা rule:
+        a. RESERVED_NAMES লিস্টে থাকলে ব্লক
+        b. tenants/{name} আগে থেকেই থাকলে ব্লক ("অন্য নাম try করো")
+        c. ফরম্যাট ভ্যালিড না হলে ব্লক
+     4. সফল হলে tenants/{name} ডকুমেন্টে লেখা হয়, সাথে ownerUid/ownerEmail
+        লিংক থাকে — যাতে এই Google অ্যাকাউন্ট ভবিষ্যতে নিজের আইডি ফিরে
+        দেখতে পারে (Step 3 এর মাধ্যমে)।
+     5. একই tenants collection ব্যবহার করা হয়েছে যা CSM Mail panel-এ
+        ব্যবহৃত হয় — তাই এখানে রেজিস্টার করা নাম সরাসরি সেই panel-এও
+        কাজ করবে (?id=NAME)।
+
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+
+// ══════════════════════════════
+// ▶ CONFIGURATION — এখানেই অ্যাডমিন-রিজার্ভড নামগুলো বসাও
+//   কমা দিয়ে আলাদা করো। এই নামগুলো কেউ রেজিস্টার করতে পারবে না।
+// ══════════════════════════════
+const RESERVED_NAMES = "admin,info,support,help,contact,billing,abuse,postmaster,root,webmaster,noreply,no-reply,security,mail,sales,office,team,hr,system,owner,mohasin,csm".split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+
+// ══════════════════════════════
+// ▶ STATE
+// ══════════════════════════════
+let currentUser   = null;   // Firebase Auth user object
+let nameCheckTimer = null;
+let nameAvailable  = false;
+let lastCheckedName = '';
+
+// ══════════════════════════════
+// ▶ HELPERS
+// ══════════════════════════════
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setAlert(slotId, type, msg) {
+  const slot = document.getElementById(slotId);
+  if (!msg) { slot.innerHTML = ''; return; }
+  slot.innerHTML = `<div class="alert alert-${type}">${type === 'err' ? '⚠️' : '✅'}<span>${esc(msg)}</span></div>`;
+}
+
+function acctChipHTML(user) {
+  const photo = user.photoURL || '';
+  const avatarHTML = photo
+    ? `<img class="acct-avatar" src="${esc(photo)}" alt="">`
+    : `<div class="acct-avatar" style="display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--blue);">${esc((user.displayName||user.email||'?')[0].toUpperCase())}</div>`;
+  return `
+    ${avatarHTML}
+    <div class="acct-meta">
+      <div class="acct-name">${esc(user.displayName || 'Google User')}</div>
+      <div class="acct-email">${esc(user.email)}</div>
+    </div>
+    <button class="acct-out" onclick="handleSignOut()">Sign out</button>
+  `;
+}
+
+function copyId(elId) {
+  const text = document.getElementById(elId).textContent.trim();
+  navigator.clipboard?.writeText(text);
+  const btn = event.target;
+  const old = btn.textContent;
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => { btn.textContent = old; }, 1500);
+}
+
+// ══════════════════════════════
+// ▶ BOOT
+// ══════════════════════════════
+window.addEventListener('firebase-ready', () => {
+  const { onAuthStateChanged } = window.__fb;
+  onAuthStateChanged(window.__auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      await routeAfterAuth(user);
+    } else {
+      currentUser = null;
+      showStep('stepGoogle');
+    }
+  });
+});
+
+// ══════════════════════════════
+// ▶ AFTER AUTH — check if this Google account already owns a name
+// ══════════════════════════════
+async function routeAfterAuth(user) {
+  showStep('stepBoot');
+  try {
+    const existing = await findTenantByOwner(user.uid);
+    if (existing) {
+      document.getElementById('acctChipExisting').innerHTML = acctChipHTML(user);
+      document.getElementById('existingId').textContent = existing.id + '@uno.pro.bd';
+      showStep('stepExisting');
+      // ── সরাসরি mail panel-এ redirect করো ──
+      setTimeout(() => {
+        window.location.href = 'index.html?id=' + encodeURIComponent(existing.id);
+      }, 900);
+    } else {
+      document.getElementById('acctChip').innerHTML = acctChipHTML(user);
+      document.getElementById('contactInput').value = '';
+      document.getElementById('nameInput').value = '';
+      setAlert('regAlertSlot', '', '');
+      showStep('stepRegister');
+      setTimeout(() => document.getElementById('nameInput')?.focus(), 150);
+    }
+  } catch (e) {
+    console.error(e);
+    setAlert('regAlertSlot', 'err', 'কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করো।');
+    showStep('stepRegister');
+  }
+}
+
+async function findTenantByOwner(uid) {
+  const { collection, query, where, getDocs } = window.__fb;
+  const db = window.__db;
+  const q = query(collection(db, 'tenants'), where('ownerUid', '==', uid));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  let result = null;
+  snap.forEach(d => { result = d.data(); });
+  return result;
+}
+
+// ══════════════════════════════
+// ▶ GOOGLE SIGN-IN / SIGN-OUT
+// ══════════════════════════════
+async function handleGoogleSignIn() {
+  const btn = document.getElementById('googleBtn');
+  btn.classList.add('loading');
+  try {
+    const { signInWithPopup, provider } = window.__fb;
+    await signInWithPopup(window.__auth, provider);
+    // onAuthStateChanged will route automatically
+  } catch (e) {
+    console.error(e);
+    alert('Google সাইন-ইন ব্যর্থ হয়েছে: ' + (e.message || e.code || 'Unknown error'));
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+async function handleSignOut() {
+  const { signOut } = window.__fb;
+  await signOut(window.__auth);
+  currentUser = null;
+  document.getElementById('nameInput').value = '';
+  document.getElementById('contactInput').value = '';
+  setAlert('regAlertSlot', '', '');
+  showStep('stepGoogle');
+}
+
+// ══════════════════════════════
+// ▶ NAME VALIDATION + AVAILABILITY (debounced)
+// ══════════════════════════════
+function normalizeName(raw) {
+  return raw.toLowerCase().trim();
+}
+
+function nameFormatValid(name) {
+  // lowercase letters, digits, dot, dash, underscore — 3 to 24 chars
+  // start/end must be alnum, no consecutive dots
+  return /^[a-z0-9][a-z0-9._-]{1,22}[a-z0-9]$/.test(name) && !name.includes('..');
+}
+
+function onNameInput() {
+  const raw = document.getElementById('nameInput').value;
+  const name = normalizeName(raw);
+  document.getElementById('nameInput').value = raw; // keep what user typed visually, validate normalized
+  nameAvailable = false;
+
+  const wrap = document.getElementById('idWrap');
+  const hint = document.getElementById('nameHint');
+  wrap.classList.remove('ok', 'err');
+
+  clearTimeout(nameCheckTimer);
+
+  if (!name) {
+    hint.className = 'hint';
+    hint.textContent = 'কমপক্ষে ৩ অক্ষর। যেমন: rahim, csm.mohasin, dev_zafar';
+    return;
+  }
+
+  if (!nameFormatValid(name)) {
+    wrap.classList.add('err');
+    hint.className = 'hint err';
+    hint.textContent = 'শুধু ছোট হাতের অক্ষর, সংখ্যা, এবং . _ - চলবে। ৩-২৪ অক্ষর, শুরু/শেষ অক্ষর/সংখ্যা হতে হবে।';
+    return;
+  }
+
+  if (RESERVED_NAMES.includes(name)) {
+    wrap.classList.add('err');
+    hint.className = 'hint err';
+    hint.textContent = `"${name}" নামটি reserved — অন্য একটা নাম try করো।`;
+    return;
+  }
+
+  hint.className = 'hint checking';
+  hint.textContent = 'চেক করা হচ্ছে…';
+
+  nameCheckTimer = setTimeout(() => checkAvailability(name), 450);
+}
+
+async function checkAvailability(name) {
+  lastCheckedName = name;
+  const wrap = document.getElementById('idWrap');
+  const hint = document.getElementById('nameHint');
+
+  try {
+    const { doc, getDoc } = window.__fb;
+    const ref = doc(window.__db, 'tenants', name);
+    const snap = await getDoc(ref);
+
+    // race-condition guard: user might've typed more while we waited
+    if (normalizeName(document.getElementById('nameInput').value) !== name) return;
+
+    if (snap.exists()) {
+      wrap.classList.remove('ok'); wrap.classList.add('err');
+      hint.className = 'hint err';
+      hint.textContent = `"${name}" আগে থেকেই নেওয়া হয়ে গেছে — অন্য একটা নাম try করো।`;
+      nameAvailable = false;
+    } else {
+      wrap.classList.remove('err'); wrap.classList.add('ok');
+      hint.className = 'hint ok';
+      hint.textContent = `✓ "${name}" available — এটা নেওয়া যাবে।`;
+      nameAvailable = true;
+    }
+  } catch (e) {
+    console.error(e);
+    hint.className = 'hint err';
+    hint.textContent = 'চেক করতে সমস্যা হয়েছে। আবার চেষ্টা করো।';
+    nameAvailable = false;
+  }
+}
+
+// ══════════════════════════════
+// ▶ SUBMIT REGISTRATION
+// ══════════════════════════════
+async function doRegisterSubmit() {
+  if (!currentUser) return;
+
+  const rawName = document.getElementById('nameInput').value;
+  const name    = normalizeName(rawName);
+  const contact = document.getElementById('contactInput').value.trim();
+  const btn     = document.getElementById('submitBtn');
+
+  setAlert('regAlertSlot', '', '');
+
+  if (!name) return setAlert('regAlertSlot', 'err', 'একটা নাম দাও।');
+  if (!nameFormatValid(name)) return setAlert('regAlertSlot', 'err', 'নামের ফরম্যাট ঠিক নয়।');
+  if (RESERVED_NAMES.includes(name)) return setAlert('regAlertSlot', 'err', `"${name}" নামটি reserved — অন্য নাম try করো।`);
+  if (!contact) return setAlert('regAlertSlot', 'err', 'যোগাযোগের তথ্য দাও।');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const { doc, getDoc, setDoc, serverTimestamp } = window.__fb;
+    const db = window.__db;
+    const ref = doc(db, 'tenants', name);
+
+    // Final race-condition-safe check right before writing
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      setAlert('regAlertSlot', 'err', `"${name}" এর মধ্যে অন্য কেউ নিয়ে নিয়েছে — অন্য একটা নাম try করো।`);
+      document.getElementById('idWrap').classList.add('err');
+      document.getElementById('idWrap').classList.remove('ok');
+      nameAvailable = false;
+      return;
+    }
+    if (RESERVED_NAMES.includes(name)) {
+      setAlert('regAlertSlot', 'err', `"${name}" নামটি reserved।`);
+      return;
+    }
+
+    await setDoc(ref, {
+      id: name,
+      email: name + '@uno.pro.bd',
+      ownerUid: currentUser.uid,
+      ownerGoogleEmail: currentUser.email,
+      ownerName: currentUser.displayName || '',
+      contactInfo: contact,
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp()
+    });
+
+    document.getElementById('doneId').textContent = name + '@uno.pro.bd';
+    showStep('stepDone');
+    // ── সরাসরি mail panel-এ redirect করো ──
+    setTimeout(() => {
+      window.location.href = 'index.html?id=' + encodeURIComponent(name);
+    }, 900);
+  } catch (e) {
+    console.error(e);
+    setAlert('regAlertSlot', 'err', 'রেজিস্ট্রেশন ব্যর্থ হয়েছে: ' + (e.message || 'Unknown error'));
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
