@@ -753,7 +753,7 @@ async function doRegisterSubmit() {
     showStep('stepDone');
     // ── সরাসরি mail panel-এ redirect করো ──
     setTimeout(() => {
-      window.location.href = 'index.html?id=' + encodeURIComponent(name);
+      window.location.href = 'mail?id=' + encodeURIComponent(name);
     }, 900);
   } catch (e) {
     console.error(e);
