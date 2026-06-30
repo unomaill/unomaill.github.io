@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSM Broadcast · Pro Mailer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Cabinet+Grotesk:wght@300;400;500;700;800&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     FIREBASE MODULE — Multi-Tenant Auth System
+     ═══════════════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs,
+    orderBy, query, serverTimestamp, doc, getDoc, setDoc, where
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDq0CU1M027j37woNy9H6TuydxYpXU0BPs",
+    authDomain: "uno-mail.firebaseapp.com",
+    projectId: "uno-mail",
+    storageBucket: "uno-mail.firebasestorage.app",
+    messagingSenderId: "404418289214",
+    appId: "1:404418289214:web:aad0175e599a82e106bb6f"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+
+  // Expose globally
+  window.__db = db;
+  window.__auth = auth;
+  window.__fsModule = {
+    collection, addDoc, getDocs, orderBy, query,
+    serverTimestamp, doc, getDoc, setDoc, where
+  };
+  window.__authModule = {
+    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, googleProvider
+  };
+
+  // ── Tell app Firebase is ready, then start tenant boot ──
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0f2f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fc;
+  --surface-3: #eef0f8;
+  --border: #e2e5f0;
+  --border-2: #d0d4e8;
+  --ink: #0f1117;
+  --ink-2: #3d4258;
+  --ink-3: #8890a8;
+  --ink-4: #b8bdd0;
+  --blue: #2563eb;
+  --blue-light: #eff4ff;
+  --blue-glow: rgba(37,99,235,0.15);
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --red: #dc2626;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --shadow-sm: 0 1px 3px rgba(15,17,23,0.06), 0 1px 2px rgba(15,17,23,0.04);
+  --shadow-md: 0 4px 16px rgba(15,17,23,0.08), 0 2px 6px rgba(15,17,23,0.05);
+  --shadow-lg: 0 12px 40px rgba(15,17,23,0.12), 0 4px 16px rgba(15,17,23,0.08);
+  --shadow-xl: 0 24px 64px rgba(15,17,23,0.18), 0 8px 24px rgba(15,17,23,0.1);
+  --r: 14px;
+  --r-sm: 8px;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+html { font-size: 15px; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── BG PATTERN ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(37,99,235,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(5,150,105,0.04) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-icon {
+  width: 38px; height: 38px;
+  background: var(--blue);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon svg { width: 20px; height: 20px; color: #fff; }
+
+.logo-name {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.logo-name .top {
+  font-size: 15px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.3px;
+}
+.logo-name .bot {
+  font-size: 10px; font-weight: 500;
+  color: var(--ink-3); letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+/* ─── FAB COMPOSE BUTTON — Gmail style bottom-right ─── */
+.fab-compose {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 16px 18px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-align: left;
+}
+
+.fab-compose::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(37,99,235,0.06), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.fab-compose:hover {
+  border-color: var(--blue);
+  box-shadow: 0 8px 32px var(--blue-glow);
+  transform: translateY(-3px) scale(1.02);
+  color: var(--blue);
+}
+.fab-compose:hover::before { opacity: 1; }
+.fab-compose:active { transform: scale(0.97); }
+
+.fab-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+}
+
+.fab-icon svg { width: 18px; height: 18px; color: #fff; }
+
+/* ─── SIDEBAR NAV ─── */
+.sidebar-nav {
+  flex: 1;
+  padding: 0 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  overflow-y: auto;
+}
+
+.nav-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--ink-4); letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 10px 4px;
+  font-family: var(--font-mono);
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 13.5px; font-weight: 500;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.nav-item:hover { background: var(--surface-2); color: var(--ink); }
+.nav-item.active {
+  background: var(--blue-light);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--blue);
+  color: #fff;
+  font-size: 10px; font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 99px;
+  min-width: 20px; text-align: center;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: var(--green-light);
+  border-radius: 10px;
+  border: 1px solid rgba(5,150,105,0.15);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: blink-dot 2s ease-in-out infinite;
+}
+
+@keyframes blink-dot {
+  0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+}
+
+.status-text {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--green);
+  font-family: var(--font-mono);
+}
+
+/* ─── MAIN AREA ─── */
+.main {
+  margin-left: 260px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+/* ─── TOP BAR ─── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px;
+  background: rgba(240,242,248,0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 40;
+}
+
+.topbar-title {
+  font-size: 18px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.4px;
+}
+
+.topbar-sub {
+  font-size: 12px; color: var(--ink-3);
+  font-family: var(--font-mono); margin-top: 1px;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.icon-btn {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--ink-3);
+  transition: all 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+.icon-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* ─── INBOX BODY ─── */
+.inbox-body {
+  flex: 1;
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 20px;
+  overflow-y: auto;
+}
+
+/* ─── STATS ROW ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 14px;
+  animation: fade-up 0.4s ease both;
+}
+
+.stat-card:nth-child(2) { animation-delay: 0.05s; }
+.stat-card:nth-child(3) { animation-delay: 0.1s; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.stat-icon.blue { background: var(--blue-light); }
+.stat-icon.green { background: var(--green-light); }
+.stat-icon.amber { background: var(--amber-light); }
+
+.stat-info { flex: 1; }
+.stat-val {
+  font-size: 24px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.5px;
+  font-family: var(--font-mono);
+}
+.stat-label { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+
+/* ─── MAIL TABLE SECTION ─── */
+.table-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  animation: fade-up 0.4s 0.15s ease both;
+}
+
+.table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-title {
+  font-size: 14px; font-weight: 700; color: var(--ink);
+}
+
+.table-count {
+  font-size: 11px; font-family: var(--font-mono);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.refresh-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.refresh-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.refresh-btn svg { width: 13px; height: 13px; }
+.refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── MAIL ROWS ─── */
+.mail-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 90px 80px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+  animation: row-in 0.3s ease both;
+}
+
+.mail-row:last-child { border-bottom: none; }
+.mail-row:hover { background: var(--surface-2); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.row-avatar {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+
+.row-to { display: flex; flex-direction: column; gap: 2px; }
+.row-email { font-size: 13px; font-weight: 600; color: var(--ink); }
+.row-name { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+
+.row-subject {
+  font-size: 13px; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.row-time {
+  font-size: 11px; color: var(--ink-3);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.row-tags { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+
+.tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 5px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.tag-blue { background: var(--blue-light); color: var(--blue); }
+.tag-green { background: var(--green-light); color: var(--green); }
+.tag-amber { background: var(--amber-light); color: var(--amber); }
+.tag-gray { background: var(--surface-3); color: var(--ink-3); border: 1px solid var(--border); }
+
+/* ─── EMPTY STATE ─── */
+.empty-box {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px; gap: 14px;
+  text-align: center;
+}
+
+.empty-emoji { font-size: 40px; }
+.empty-h { font-size: 16px; font-weight: 700; color: var(--ink-2); }
+.empty-p { font-size: 13px; color: var(--ink-3); max-width: 240px; line-height: 1.6; }
+
+/* ─── COMPOSE MODAL ─── */
+.compose-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,17,23,0.4);
+  backdrop-filter: blur(8px);
+  z-index: 500;
+  display: flex; align-items: flex-end; justify-content: flex-end;
+  padding: 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.compose-overlay.open {
+  opacity: 1; pointer-events: auto;
+}
+
+.compose-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 560px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border);
+  transform: translateY(30px) scale(0.96);
+  transition: transform 0.35s cubic-bezier(0.34,1.4,0.64,1);
+  overflow: hidden;
+}
+
+.compose-overlay.open .compose-modal {
+  transform: translateY(0) scale(1);
+}
+
+.compose-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--ink);
+  cursor: move;
+}
+
+.compose-modal-title {
+  font-size: 13px; font-weight: 700;
+  color: #fff; letter-spacing: -0.2px;
+}
+
+.compose-modal-actions { display: flex; gap: 6px; }
+
+.c-btn {
+  width: 28px; height: 28px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: rgba(255,255,255,0.7);
+  transition: all 0.15s;
+}
+.c-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+.c-btn svg { width: 12px; height: 12px; }
+
+.compose-modal-body {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+
+.cfield {
+  display: flex; align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  min-height: 46px;
+  gap: 12px;
+}
+
+.cfield-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.cfield-row .cfield {
+  border-bottom: none;
+  border-right: 1px solid var(--border);
+  min-height: 46px;
+}
+.cfield-row .cfield:last-child { border-right: none; }
+
+.cfield-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--ink-4); letter-spacing: 1px;
+  text-transform: uppercase; font-family: var(--font-mono);
+  flex-shrink: 0; min-width: 36px;
+}
+
+.cfield input {
+  flex: 1; border: none; outline: none;
+  font-size: 13.5px; color: var(--ink);
+  font-family: var(--font-display);
+  background: transparent; padding: 12px 0;
+}
+
+.cfield input::placeholder { color: var(--ink-4); }
+.cfield input[readonly] {
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.cfield-prefix {
+  display: flex; align-items: center; flex: 1; gap: 0;
+}
+
+.cfield-prefix input {
+  flex: 1; border: none; outline: none;
+  font-size: 13.5px; color: var(--ink);
+  font-family: var(--font-display);
+  background: transparent; padding: 12px 0;
+  min-width: 0;
+}
+
+.cfield-at {
+  font-size: 13px; color: var(--ink-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* ─── RICH TOOLBAR ─── */
+.rich-toolbar {
+  display: flex; align-items: center; gap: 3px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  flex-wrap: wrap;
+}
+
+.tb-btn {
+  width: 28px; height: 28px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink-2);
+  font-size: 12px; font-family: var(--font-display);
+  transition: all 0.12s;
+  position: relative;
+}
+
+.tb-btn:hover { background: var(--border); color: var(--blue); border-color: var(--border-2); }
+.tb-btn:active { transform: scale(0.93); }
+
+.tb-color-wrap { overflow: visible; }
+
+.tb-sep {
+  width: 1px; height: 18px;
+  background: var(--border-2); margin: 0 3px;
+}
+
+.tb-clear { color: var(--ink-3); }
+.tb-clear:hover { color: var(--red); background: #fff5f5; border-color: rgba(220,38,38,0.2); }
+
+/* ─── COMPOSE TEXTAREA WRAP ─── */
+.compose-textarea-wrap {
+  padding: 16px 20px;
+  flex: 1;
+}
+/* ─── COMPOSE RICH BODY ─── */
+.compose-richbody {
+  width: 100%; min-height: 200px;
+  border: none; outline: none;
+  font-size: 14px; line-height: 1.75;
+  color: var(--ink);
+  font-family: var(--font-display);
+  background: transparent;
+  word-break: break-word;
+}
+
+.compose-richbody:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+/* ─── COMPOSE TEXTAREA (legacy, hidden) ─── */
+.compose-textarea {
+  display: none;
+}
+
+/* ─── COMPOSE FOOTER ─── */
+.compose-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.footer-tools { display: flex; align-items: center; gap: 6px; }
+
+.tool-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink-3);
+  transition: all 0.15s; position: relative;
+}
+.tool-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.tool-btn svg { width: 15px; height: 15px; }
+
+.attach-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: var(--blue-light);
+  border: 1px solid rgba(37,99,235,0.2);
+  border-radius: 8px;
+  font-size: 11px; color: var(--blue); font-weight: 600;
+}
+
+.attach-chip .x {
+  cursor: pointer; opacity: 0.6; font-size: 13px;
+  transition: opacity 0.15s;
+}
+.attach-chip .x:hover { opacity: 1; }
+
+.send-btn-compose {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  background: var(--blue);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 13.5px; font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+  position: relative; overflow: hidden;
+}
+
+.send-btn-compose::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+}
+
+.send-btn-compose:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+.send-btn-compose:active { transform: scale(0.97); }
+.send-btn-compose svg { width: 15px; height: 15px; }
+
+.send-btn-compose.loading {
+  color: transparent; pointer-events: none;
+}
+.send-btn-compose.loading::after {
+  content: '';
+  position: absolute; width: 16px; height: 16px;
+  top: 50%; left: 50%; margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ─── TOAST ─── */
+.toast-wrap {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  animation: toast-pop 0.4s cubic-bezier(0.34,1.4,0.64,1) both;
+  white-space: nowrap;
+}
+
+@keyframes toast-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast.success { background: #fff; color: var(--green); border: 1px solid rgba(5,150,105,0.2); }
+.toast.error { background: #fff; color: var(--red); border: 1px solid rgba(220,38,38,0.2); }
+.toast.info { background: #fff; color: var(--blue); border: 1px solid rgba(37,99,235,0.2); }
+
+/* ─── DETAIL MODAL ─── */
+.detail-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,17,23,0.5);
+  backdrop-filter: blur(10px);
+  z-index: 600;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.detail-overlay.open { opacity: 1; pointer-events: auto; }
+
+.detail-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%; max-width: 700px;
+  max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border);
+  transform: scale(0.94);
+  transition: transform 0.3s cubic-bezier(0.34,1.4,0.64,1);
+  overflow: hidden;
+}
+
+.detail-overlay.open .detail-modal { transform: scale(1); }
+
+.detail-head {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+}
+
+.detail-subject {
+  font-size: 18px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.3px; margin-bottom: 8px;
+}
+
+.detail-meta {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+
+.meta-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px; color: var(--ink-2); font-family: var(--font-mono);
+}
+
+.meta-chip b { color: var(--ink); }
+
+.close-btn {
+  width: 34px; height: 34px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink-3); flex-shrink: 0;
+  transition: all 0.15s;
+}
+.close-btn:hover { border-color: var(--red); color: var(--red); background: #fff5f5; }
+.close-btn svg { width: 14px; height: 14px; }
+
+.detail-body {
+  flex: 1; overflow-y: auto;
+  padding: 24px;
+  background: #fafbff;
+  color: var(--ink);
+  font-size: 14px; line-height: 1.8;
+}
+
+/* ─── HIDDEN FILE INPUT ─── */
+#fileInput { display: none; }
+
+/* ─── LOADING SKELETON ─── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--border) 50%, var(--surface-3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skel-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 90px 80px;
+  align-items: center; gap: 14px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   ▓▓▓ NEW: MULTI-TENANT AUTH OVERLAY ▓▓▓
+   ══════════════════════════════════════════════════════════════ */
+
+/* ─── AUTH OVERLAY (full screen, z-index above everything) ─── */
+#authOverlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  /* shown by default, hidden after successful auth */
+}
+
+/* background decoration same as body */
+#authOverlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(37,99,235,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(5,150,105,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%; max-width: 420px;
+  box-shadow: var(--shadow-xl);
+  animation: fade-up 0.4s ease both;
+  position: relative; z-index: 1;
+}
+
+/* ─── Auth Card Header ─── */
+.auth-logo {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 28px;
+}
+.auth-logo-icon {
+  width: 44px; height: 44px;
+  background: var(--blue); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+}
+.auth-logo-icon svg { width: 22px; height: 22px; color: #fff; }
+.auth-logo-text { display: flex; flex-direction: column; gap: 2px; }
+.auth-logo-name { font-size: 17px; font-weight: 800; color: var(--ink); letter-spacing: -0.3px; }
+.auth-logo-sub  { font-size: 10px; font-family: var(--font-mono); color: var(--ink-3); letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ─── Tenant Badge ─── */
+.auth-tenant-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--blue-light);
+  border: 1.5px solid rgba(37,99,235,0.2);
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-size: 12px; font-weight: 700;
+  color: var(--blue); font-family: var(--font-mono);
+  margin-bottom: 24px;
+  letter-spacing: 0.3px;
+}
+.auth-tenant-badge .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--blue); opacity: 0.7;
+}
+
+/* ─── Auth Titles ─── */
+.auth-title {
+  font-size: 22px; font-weight: 800;
+  color: var(--ink); letter-spacing: -0.4px;
+  margin-bottom: 6px;
+}
+.auth-sub {
+  font-size: 13px; color: var(--ink-3);
+  line-height: 1.6; margin-bottom: 26px;
+}
+
+/* ─── Auth Fields ─── */
+.auth-field {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 14px;
+}
+.auth-field label {
+  font-size: 11px; font-weight: 700;
+  color: var(--ink-2); font-family: var(--font-mono);
+  letter-spacing: 0.8px; text-transform: uppercase;
+}
+.auth-field input {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px; color: var(--ink);
+  font-family: var(--font-display);
+  outline: none;
+  background: var(--surface-2);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.auth-field input:focus {
+  border-color: var(--blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+}
+
+/* ─── Auth Button ─── */
+.auth-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--blue);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+  margin-top: 6px;
+  position: relative; overflow: hidden;
+}
+.auth-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.4); }
+.auth-btn:active { transform: scale(0.98); }
+.auth-btn.loading { color: transparent; pointer-events: none; }
+.auth-btn.loading::after {
+  content: '';
+  position: absolute; width: 18px; height: 18px;
+  top: 50%; left: 50%; margin: -9px 0 0 -9px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+
+/* ─── Auth Error ─── */
+.auth-error {
+  font-size: 12px; color: var(--red);
+  font-weight: 600; font-family: var(--font-mono);
+  text-align: center; margin-top: 12px;
+  min-height: 18px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+
+/* ─── Auth Divider ─── */
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 0 4px;
+}
+.auth-divider span {
+  font-size: 11px; color: var(--ink-4);
+  font-family: var(--font-mono); white-space: nowrap;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1;
+  height: 1px; background: var(--border);
+}
+
+/* ─── Auth Footer Note ─── */
+.auth-note {
+  font-size: 11.5px; color: var(--ink-4);
+  text-align: center; margin-top: 16px;
+  font-family: var(--font-mono); line-height: 1.6;
+}
+
+/* ─── No ID Screen ─── */
+.auth-no-id {
+  text-align: center; padding: 8px 0 0;
+}
+.auth-no-id .no-id-icon { font-size: 40px; margin-bottom: 14px; }
+.auth-no-id .no-id-title { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.auth-no-id .no-id-sub {
+  font-size: 13px; color: var(--ink-3);
+  font-family: var(--font-mono); line-height: 1.7;
+}
+
+/* ─── Passcode Screen ─── */
+#passcodeOverlay {
+  position: fixed; inset: 0; z-index: 8500;
+  background: rgba(15,17,23,0.6);
+  backdrop-filter: blur(16px);
+  display: none;
+  align-items: center; justify-content: center;
+}
+
+.passcode-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 36px 32px;
+  width: 100%; max-width: 340px;
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  animation: fade-up 0.3s ease both;
+}
+.passcode-icon { font-size: 36px; margin-bottom: 14px; }
+.passcode-title { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.passcode-sub   { font-size: 12px; color: var(--ink-3); margin-bottom: 24px; font-family: var(--font-mono); }
+.passcode-dots  { display: flex; justify-content: center; gap: 12px; margin-bottom: 24px; }
+.passcode-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--border-2); background: transparent; transition: all 0.2s;
+}
+.passcode-dot.filled { background: var(--blue); border-color: var(--blue); }
+.passcode-dot.error  { background: var(--red); border-color: var(--red); animation: shake-dot 0.4s ease; }
+
+@keyframes shake-dot {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-4px); }
+  40%,80%  { transform: translateX(4px); }
+}
+
+.passcode-numpad {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-bottom: 14px;
+}
+.pad-btn {
+  padding: 16px 10px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 18px; font-weight: 700;
+  color: var(--ink); cursor: pointer;
+  transition: all 0.12s; font-family: var(--font-mono);
+}
+.pad-btn:hover { background: var(--blue-light); border-color: var(--blue); color: var(--blue); }
+.pad-btn:active { transform: scale(0.93); }
+.pad-btn.del { font-size: 14px; color: var(--ink-3); }
+.passcode-error { font-size: 12px; color: var(--red); font-weight: 600; min-height: 18px; font-family: var(--font-mono); }
+.passcode-logout-btn {
+  margin-top: 18px; font-size: 11px; color: var(--ink-4);
+  cursor: pointer; background: none; border: none;
+  font-family: var(--font-mono); text-decoration: underline;
+}
+.passcode-logout-btn:hover { color: var(--red); }
+
+/* ─── MOBILE ─── */
+.mobile-view-tabs { display: none; }
+@media (max-width: 900px) {
+  .sidebar { width: 220px; }
+  .main { margin-left: 220px; }
+  .stats-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .compose-modal { width: 100%; border-radius: 16px 16px 0 0; }
+  .compose-overlay { padding: 0; align-items: flex-end; }
+  .mail-row { grid-template-columns: 32px 1fr 70px; }
+  .mail-row .row-subject, .mail-row .row-tags { display: none; }
+  .auth-card { padding: 30px 22px; }
+  .mobile-view-tabs {
+    display: flex; gap: 8px; padding: 10px 16px 0 16px;
+  }
+  .mobile-tab {
+    flex: 1; text-align: center; padding: 9px 10px; border-radius: 10px;
+    font-size: 12.5px; font-weight: 700; font-family: var(--font-display);
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-3);
+    cursor: pointer;
+  }
+  .mobile-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ▓▓▓ AUTH OVERLAY — দেখায় যতক্ষণ না ইউজার verified হয় ▓▓▓
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="authOverlay">
+  <div class="auth-card" id="authCard">
+    <!-- Content dynamically injected by JS based on state -->
+    <div style="text-align:center;padding:30px 0;">
+      <div style="font-size:28px;margin-bottom:12px;">⚙️</div>
+      <div style="font-size:13px;color:var(--ink-3);font-family:var(--font-mono);">Initializing...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ▓▓▓ PASSCODE OVERLAY — লগইনের পরে session lock হলে দেখায় ▓▓▓
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="passcodeOverlay">
+  <div class="passcode-card">
+    <div class="passcode-icon">🔐</div>
+    <div class="passcode-title">Screen Locked</div>
+    <div class="passcode-sub" id="pcSubText">Enter your passcode to continue</div>
+    <div class="passcode-dots" id="pcDots">
+      <div class="passcode-dot" id="pcd0"></div>
+      <div class="passcode-dot" id="pcd1"></div>
+      <div class="passcode-dot" id="pcd2"></div>
+      <div class="passcode-dot" id="pcd3"></div>
+    </div>
+    <div class="passcode-numpad">
+      <button class="pad-btn" onclick="pcPress('1')">1</button>
+      <button class="pad-btn" onclick="pcPress('2')">2</button>
+      <button class="pad-btn" onclick="pcPress('3')">3</button>
+      <button class="pad-btn" onclick="pcPress('4')">4</button>
+      <button class="pad-btn" onclick="pcPress('5')">5</button>
+      <button class="pad-btn" onclick="pcPress('6')">6</button>
+      <button class="pad-btn" onclick="pcPress('7')">7</button>
+      <button class="pad-btn" onclick="pcPress('8')">8</button>
+      <button class="pad-btn" onclick="pcPress('9')">9</button>
+      <button class="pad-btn del" onclick="pcPress('C')">CLR</button>
+      <button class="pad-btn" onclick="pcPress('0')">0</button>
+      <button class="pad-btn del" onclick="pcPress('DEL')">⌫</button>
+    </div>
+    <div class="passcode-error" id="pcError"></div>
+    <button class="passcode-logout-btn" onclick="tenantLogout()">Not you? Sign out</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP ROOT — লগইন না হওয়া পর্যন্ত hidden থাকে
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="appRoot" style="display:none; min-height:100vh;">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div class="logo-name">
+      <div class="top">CSM Mail</div>
+      <div class="bot">Pro Engine</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Mailbox</div>
+    <div class="nav-item active" id="navSent" onclick="switchView('sent')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm7 4l-7 5h14l-7-5z"/>
+      </svg>
+      Sent Broadcasts
+      <span class="nav-badge" id="sideCount">0</span>
+    </div>
+    <div class="nav-item" id="navInbox" onclick="switchView('inbox')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      Inbox
+      <span class="nav-badge" id="sideCountInbox">0</span>
+    </div>
+    <div class="nav-item" style="opacity:.5; pointer-events:none;">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      Drafts
+    </div>
+    <div class="nav-item" style="opacity:.5; pointer-events:none;">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Trash
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <div class="status-text">ENGINE LIVE</div>
+    </div>
+    <button onclick="tenantLogout()" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink-3);font-size:11px;font-family:var(--font-mono);cursor:pointer;transition:all .15s;" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.color='var(--ink-3)';this.style.borderColor='var(--border)'">⏻ Sign Out</button>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Sent Broadcasts</div>
+      <div class="topbar-sub" id="topbarSub">FIREBASE REALTIME SYNC</div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="loadMails()" title="Refresh">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="openCompose()" title="New Compose">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mobile-view-tabs">
+    <button class="mobile-tab active" id="mtabSent" onclick="switchView('sent')">📤 Sent</button>
+    <button class="mobile-tab" id="mtabInbox" onclick="switchView('inbox')">📥 Inbox</button>
+  </div>
+
+  <div class="inbox-body">
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon blue">📤</div>
+        <div class="stat-info">
+          <div class="stat-val" id="statTotal">0</div>
+          <div class="stat-label">Total Sent</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-info">
+          <div class="stat-val" id="statHtml">0</div>
+          <div class="stat-label">HTML Mails</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber">📎</div>
+        <div class="stat-info">
+          <div class="stat-val" id="statAttach">0</div>
+          <div class="stat-label">With Attachment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-section">
+      <div class="table-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="table-title">Transmission Log</div>
+          <span class="table-count" id="tableCount">0 entries</span>
+        </div>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadMails()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+      <div id="mailRows">
+        <!-- Skeleton loading -->
+        <div class="skel-row">
+          <div class="skeleton" style="width:32px;height:32px;border-radius:10px;"></div>
+          <div class="skeleton" style="height:14px;width:70%;"></div>
+          <div class="skeleton" style="height:14px;width:80%;"></div>
+          <div class="skeleton" style="height:12px;width:60%;margin-left:auto;"></div>
+          <div class="skeleton" style="height:20px;width:50px;margin-left:auto;"></div>
+        </div>
+        <div class="skel-row" style="opacity:.7;">
+          <div class="skeleton" style="width:32px;height:32px;border-radius:10px;"></div>
+          <div class="skeleton" style="height:14px;width:55%;"></div>
+          <div class="skeleton" style="height:14px;width:65%;"></div>
+          <div class="skeleton" style="height:12px;width:50%;margin-left:auto;"></div>
+          <div class="skeleton" style="height:20px;width:50px;margin-left:auto;"></div>
+        </div>
+      </div>
+      <div id="inboxRows" style="display:none;"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ═══ COMPOSE OVERLAY ═══ -->
+<div class="compose-overlay" id="composeOverlay" onclick="bgClose(event)">
+  <div class="compose-modal" id="composeModal">
+
+    <div class="compose-modal-header">
+      <div class="compose-modal-title">⚡ New Broadcast</div>
+      <div class="compose-modal-actions">
+        <button class="c-btn" title="Minimize">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/>
+          </svg>
+        </button>
+        <button class="c-btn" onclick="closeCompose()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="compose-modal-body">
+
+      <div class="cfield">
+        <div class="cfield-label">To</div>
+        <input type="email" id="cTo" placeholder="recipient@example.com" autocomplete="email">
+      </div>
+
+      <div class="cfield-row">
+        <div class="cfield">
+          <div class="cfield-label">Name</div>
+          <input type="text" id="cName" placeholder="Sender name">
+        </div>
+        <div class="cfield">
+          <div class="cfield-label">From</div>
+          <div class="cfield-prefix">
+            <input type="text" id="cPrefix" value="hello" placeholder="prefix" readonly>
+            <span class="cfield-at">@uno.pro.bd</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cfield">
+        <div class="cfield-label">Reply</div>
+        <input type="email" id="cReply" placeholder="reply-to@gmail.com">
+      </div>
+
+      <div class="cfield">
+        <div class="cfield-label">Subject</div>
+        <input type="text" id="cSubject" placeholder="Write a compelling subject...">
+      </div>
+
+      <!-- ─── RICH EDITOR TOOLBAR ─── -->
+      <div class="rich-toolbar" id="richToolbar">
+        <button class="tb-btn" title="Bold" onclick="fmt('bold')"><b>B</b></button>
+        <button class="tb-btn" title="Italic" onclick="fmt('italic')"><i>I</i></button>
+        <button class="tb-btn" title="Underline" onclick="fmt('underline')"><u>U</u></button>
+        <div class="tb-sep"></div>
+        <label class="tb-btn tb-color-wrap" title="Text Color">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M9 7l-6 13h3l1.5-3.5h9L18 20h3L15 7H9z"/><line x1="5" y1="15" x2="19" y2="15"/></svg>
+          <input type="color" id="colorPick" value="#2563eb" onchange="fmt('foreColor',this.value)" style="opacity:0;position:absolute;width:0;height:0;">
+        </label>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" title="Insert Link" onclick="insertLink()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <button class="tb-btn" title="Insert Image URL" onclick="insertImage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn tb-clear" title="Clear formatting" onclick="fmt('removeFormat')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M6 18L17.94 6M3.5 8.5L10 15m4-9l3 3"/><line x1="19" y1="19" x2="5" y2="19"/></svg>
+        </button>
+      </div>
+
+      <div class="compose-textarea-wrap">
+        <div
+          class="compose-richbody"
+          id="cBody"
+          contenteditable="true"
+          data-placeholder="Write your message, or paste from Gmail / any rich source…"
+        ></div>
+      </div>
+
+    </div>
+
+    <div class="compose-footer">
+      <div class="footer-tools">
+        <button class="tool-btn" onclick="document.getElementById('fileInput').click()" title="Attach file">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+          </svg>
+        </button>
+        <div id="attachChip" style="display:none;">
+          <div class="attach-chip">
+            <span id="attachName" style="font-size:11px;"></span>
+            <span class="x" onclick="clearAttach()">×</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="send-btn-compose" id="sendBtn" onclick="doSend()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+        Send
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ DETAIL MODAL ═══ -->
+<div class="detail-overlay" id="detailOverlay" onclick="bgCloseDetail(event)">
+  <div class="detail-modal">
+    <div class="detail-head">
+      <div style="flex:1;">
+        <div class="detail-subject" id="dSubject"></div>
+        <div class="detail-meta" id="dMeta"></div>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="detail-body" id="dBody"></div>
+  </div>
+</div>
+
+<!-- ═══ FAB COMPOSE BUTTON — Gmail style ═══ -->
+<button class="fab-compose" onclick="openCompose()">
+  <div class="fab-icon">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+    </svg>
+  </div>
+  Compose
+</button>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept="*/*">
+
+<!-- Toast -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+</div><!-- end #appRoot -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     ▓▓▓  MULTI-TENANT AUTH SYSTEM  ▓▓▓
+     ══════════════════════════════════════════════════════════════════════
+     
+     FLOW:
+     1. URL: ?id=NAME  →  tenantId = NAME
+     2. Check localStorage: কোনো saved session আছে কিনা
+     3. যদি থাকে → Firebase থেকে passcode নিয়ে verify করো
+     4. যদি না থাকে:
+        a. Firebase-এ ইউজার exist করে কিনা চেক করো
+        b. exist করলে → Login form (passcode দিয়ে)
+        c. না করলে → Register form (admin password + new passcode)
+     
+     SECURITY:
+     - প্রতিটি tenant তার নিজের collection: `tenants/{id}`
+     - Admin password কখনো client-side save হয় না
+     - Passcode hashed হয়ে Firestore-এ যায় (simple hash, production-এ bcrypt use করো)
+     - 'From' field সবসময় `id@uno.pro.bd` — readonly
+     - Mail history শুধু নিজের `id` দিয়ে filter হয়
+
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+
+// ══════════════════════════════
+// ▶ CONFIGURATION — এখানে পরিবর্তন করো
+// ══════════════════════════════
+
+// Admin password — এটি শুধু নতুন ইউজার রেজিস্ট্রেশনের জন্য
+// Production-এ এটি server-side verify করানো উচিত
+const ADMIN_PASSWORD = 'CHANGE_THIS_PASSWORD';
+
+// LocalStorage key prefix
+const LS_PREFIX = 'csm_tenant_';
+
+// ══════════════════════════════
+// ▶ STATE
+// ══════════════════════════════
+let tenantId   = null;   // URL থেকে পাওয়া ?id=
+let tenantData = null;   // Firebase থেকে পাওয়া tenant document
+let sessionActive = false;
+
+// Passcode screen state
+let pcInput = '';
+
+// ══════════════════════════════
+// ▶ SIMPLE HASH (passcode store করার জন্য)
+//   Production-এ server-side bcrypt use করো
+// ══════════════════════════════
+async function simpleHash(str) {
+  const enc = new TextEncoder().encode(str + '_csm_salt_2024');
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ══════════════════════════════
+// ▶ BOOT — Firebase ready হলে শুরু হয়
+// ══════════════════════════════
+let googleAuthListenerAttached = false;
+
+window.addEventListener('firebase-ready', async () => {
+  // URL থেকে ?id= পড়ো
+  const params = new URLSearchParams(window.location.search);
+  tenantId = (params.get('id') || '').toLowerCase().trim();
+
+  if (!tenantId) {
+    showNoIdScreen();
+    return;
+  }
+
+  // Fresh visit — Firebase-এ tenant আছে কিনা চেক করো
+  const existing = await checkTenantExists(tenantId);
+  tenantData = existing;
+
+  // ── GOOGLE-FLOW TENANT (register.html থেকে আসা: ownerUid আছে) ──
+  // এদের কোনো passcode নেই — Google session match করেই unlock হবে।
+  if (existing && existing.ownerUid) {
+    bootGoogleFlow();
+    return;
+  }
+
+  // ── LEGACY PASSCODE-FLOW TENANT (admin password + 4-digit passcode) ──
+  if (existing) {
+    const savedHash = localStorage.getItem(LS_PREFIX + tenantId);
+    if (savedHash) {
+      // Auto-show passcode (session resume)
+      showLoginForm(true);
+      return;
+    }
+    showLoginForm(false);
+    return;
+  }
+
+  // কোনো tenant ডকুমেন্ট-ই নেই — পুরনো admin-password রেজিস্ট্রেশন ফর্ম
+  // (নতুন tenant সাধারণত register.html দিয়েই আসবে, এটা শুধু ফলব্যাক)
+  localStorage.removeItem(LS_PREFIX + tenantId); // stale session hash থাকলে clear করো
+  showRegisterForm();
+});
+
+// ══════════════════════════════
+// ▶ GOOGLE-FLOW BOOT
+//   tenant doc-এ ownerUid থাকলে এই path ব্যবহার হয়।
+//   Firebase Auth state শুনে uid মিললেই সরাসরি unlock — কোনো passcode লাগে না।
+// ══════════════════════════════
+function bootGoogleFlow() {
+  const { onAuthStateChanged } = window.__authModule;
+  if (googleAuthListenerAttached) return;
+  googleAuthListenerAttached = true;
+
+  showGoogleChecking();
+
+  onAuthStateChanged(window.__auth, (user) => {
+    if (sessionActive) return; // already unlocked, ignore further changes here
+
+    if (user && user.uid === tenantData.ownerUid) {
+      // সঠিক Google অ্যাকাউন্ট সাইন-ইন করা আছে — সরাসরি ঢুকতে দাও
+      unlockApp();
+    } else if (user) {
+      // সাইন-ইন আছে, কিন্তু ভুল অ্যাকাউন্ট
+      showGoogleMismatch(user);
+    } else {
+      // সাইন-ইন নেই
+      showGoogleSignInRequired();
+    }
+  });
+}
+
+async function handleIndexGoogleSignIn() {
+  const btn = document.getElementById('googleAuthBtn');
+  if (btn) btn.classList.add('loading');
+  try {
+    const { signInWithPopup, googleProvider } = window.__authModule;
+    await signInWithPopup(window.__auth, googleProvider);
+    // onAuthStateChanged উপরে handle করবে
+  } catch (e) {
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.textContent = 'Google সাইন-ইন ব্যর্থ: ' + (e.message || e.code || 'Unknown error');
+  } finally {
+    if (btn) btn.classList.remove('loading');
+  }
+}
+
+async function handleIndexGoogleSwitch() {
+  const { signOut } = window.__authModule;
+  await signOut(window.__auth);
+  // onAuthStateChanged → showGoogleSignInRequired() আবার দেখাবে
+}
+
+// ══════════════════════════════
+// ▶ FIREBASE HELPERS
+// ══════════════════════════════
+
+async function checkTenantExists(id) {
+  try {
+    const { doc, getDoc } = window.__fsModule;
+    const ref = doc(window.__db, 'tenants', id);
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : null;
+  } catch(e) {
+    console.error('Firestore read error:', e);
+    return null;
+  }
+}
+
+async function saveTenantToFirebase(id, passcodeHash) {
+  const { doc, setDoc, serverTimestamp } = window.__fsModule;
+  await setDoc(doc(window.__db, 'tenants', id), {
+    id,
+    email: id + '@uno.pro.bd',
+    passcodeHash,
+    createdAt: serverTimestamp(),
+    lastLogin: serverTimestamp()
+  });
+}
+
+async function updateLastLogin(id) {
+  try {
+    const { doc, setDoc, serverTimestamp, getDoc } = window.__fsModule;
+    const ref = doc(window.__db, 'tenants', id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await setDoc(ref, { ...snap.data(), lastLogin: serverTimestamp() });
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════
+// ▶ UI RENDERERS
+// ══════════════════════════════
+
+function getCardHTML_Logo() {
+  return `
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div class="auth-logo-text">
+        <div class="auth-logo-name">CSM Mail</div>
+        <div class="auth-logo-sub">Pro Engine</div>
+      </div>
+    </div>
+    <div class="auth-tenant-badge">
+      <span class="dot"></span>
+      ${tenantId}@uno.pro.bd
+    </div>
+  `;
+}
+
+// ══════════════════════════════
+// ▶ GOOGLE-FLOW SCREENS
+// ══════════════════════════════
+function showGoogleChecking() {
+  document.getElementById('authCard').innerHTML = `
+    ${getCardHTML_Logo()}
+    <div class="auth-title">Checking session…</div>
+    <div class="auth-sub">Google sign-in অবস্থা যাচাই করা হচ্ছে।</div>
+  `;
+}
+
+function showGoogleSignInRequired() {
+  document.getElementById('authCard').innerHTML = `
+    ${getCardHTML_Logo()}
+    <div class="auth-title">Sign in with Google</div>
+    <div class="auth-sub">এই ইমেইল আইডি (<strong>${tenantId}@uno.pro.bd</strong>) যে Google অ্যাকাউন্ট দিয়ে রেজিস্টার করা হয়েছিল, সেই অ্যাকাউন্ট দিয়ে সাইন-ইন করো।</div>
+
+    <button class="auth-btn" id="googleAuthBtn" onclick="handleIndexGoogleSignIn()" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <svg viewBox="0 0 48 48" style="width:18px;height:18px;flex-shrink:0;">
+        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div class="auth-error" id="authError"></div>
+  `;
+}
+
+function showGoogleMismatch(user) {
+  document.getElementById('authCard').innerHTML = `
+    ${getCardHTML_Logo()}
+    <div class="auth-title">এই অ্যাকাউন্ট মিলছে না</div>
+    <div class="auth-sub">তুমি সাইন-ইন আছো <strong>${user.email || 'একটা Google অ্যাকাউন্ট'}</strong> দিয়ে, কিন্তু <strong>${tenantId}@uno.pro.bd</strong> অন্য একটা Google অ্যাকাউন্টের সাথে যুক্ত। সঠিক অ্যাকাউন্ট দিয়ে সাইন-ইন করো।</div>
+
+    <button class="auth-btn" onclick="handleIndexGoogleSwitch()">ভিন্ন অ্যাকাউন্ট দিয়ে সাইন-ইন করো</button>
+    <div class="auth-error" id="authError"></div>
+  `;
+}
+
+function showNoIdScreen() {
+  document.getElementById('authCard').innerHTML = `
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div class="auth-logo-text">
+        <div class="auth-logo-name">CSM Mail</div>
+        <div class="auth-logo-sub">Pro Engine</div>
+      </div>
+    </div>
+    <div class="auth-no-id">
+      <div class="no-id-icon">🔗</div>
+      <div class="no-id-title">No Access Link</div>
+      <div class="no-id-sub">
+        একটি valid link প্রয়োজন।<br><br>
+        Format: <code style="background:var(--surface-3);padding:2px 8px;border-radius:5px;font-size:11px;">?id=yourname</code>
+      </div>
+    </div>
+  `;
+}
+
+function showRegisterForm() {
+  document.getElementById('authCard').innerHTML = `
+    ${getCardHTML_Logo()}
+    <div class="auth-title">Create Account</div>
+    <div class="auth-sub">Admin password প্রয়োজন। তারপর নিজের 4-digit passcode সেট করো।</div>
+
+    <div class="auth-field">
+      <label>Admin Password</label>
+      <input type="password" id="regAdminPass" placeholder="••••••••" autocomplete="off">
+    </div>
+    <div class="auth-field">
+      <label>New Passcode (4 digit)</label>
+      <input type="password" id="regPasscode" placeholder="e.g. 1234" maxlength="4" inputmode="numeric" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label>Confirm Passcode</label>
+      <input type="password" id="regPasscodeConfirm" placeholder="Repeat passcode" maxlength="4" inputmode="numeric" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')doRegister()">
+    </div>
+
+    <button class="auth-btn" id="regBtn" onclick="doRegister()">Create Account &amp; Continue</button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-note">
+      Registering as: <strong>${tenantId}@uno.pro.bd</strong>
+    </div>
+  `;
+}
+
+function showLoginForm(hasSession) {
+  document.getElementById('authCard').innerHTML = `
+    ${getCardHTML_Logo()}
+    <div class="auth-title">${hasSession ? 'Welcome back' : 'Sign In'}</div>
+    <div class="auth-sub">${hasSession
+      ? 'Your session was saved. Enter passcode to continue.'
+      : 'Enter your 4-digit passcode to access the panel.'}</div>
+
+    <div class="auth-field">
+      <label>Passcode (4 digit)</label>
+      <input type="password" id="loginPasscode" placeholder="••••" maxlength="4" inputmode="numeric" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()" autofocus>
+    </div>
+
+    <button class="auth-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
+    <div class="auth-error" id="authError"></div>
+
+    <div class="auth-divider"><span>or</span></div>
+    <button onclick="clearSessionAndRefresh()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:transparent;color:var(--ink-3);font-size:13px;cursor:pointer;font-family:var(--font-display);transition:all .15s;"
+      onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink-3)'">
+      Clear session &amp; start over
+    </button>
+    <div class="auth-note">Signed in as: <strong>${tenantId}@uno.pro.bd</strong></div>
+  `;
+
+  // Auto-focus
+  setTimeout(() => {
+    const el = document.getElementById('loginPasscode');
+    if (el) el.focus();
+  }, 100);
+}
+
+// ══════════════════════════════
+// ▶ ACTIONS
+// ══════════════════════════════
+
+async function doRegister() {
+  const adminPass     = document.getElementById('regAdminPass')?.value || '';
+  const passcode      = document.getElementById('regPasscode')?.value.trim() || '';
+  const passcodeConf  = document.getElementById('regPasscodeConfirm')?.value.trim() || '';
+  const btn           = document.getElementById('regBtn');
+  const errEl         = document.getElementById('authError');
+
+  errEl.textContent = '';
+
+  // Validations
+  if (!adminPass)                              return setErr('Admin password প্রয়োজন।');
+  if (adminPass !== ADMIN_PASSWORD)            return setErr('❌ Wrong admin password.');
+  if (!/^\d{4}$/.test(passcode))              return setErr('Passcode অবশ্যই 4 digit হতে হবে।');
+  if (passcode !== passcodeConf)              return setErr('Passcode দুটো মিলছে না।');
+
+  btn.classList.add('loading');
+  try {
+    const hash = await simpleHash(passcode);
+    await saveTenantToFirebase(tenantId, hash);
+    tenantData = { id: tenantId, email: tenantId + '@uno.pro.bd', passcodeHash: hash };
+
+    // Session save করো
+    localStorage.setItem(LS_PREFIX + tenantId, hash);
+
+    // App unlock করো
+    unlockApp();
+  } catch(e) {
+    setErr('Firebase error: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+async function doLogin() {
+  const passcode = document.getElementById('loginPasscode')?.value.trim() || '';
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('authError');
+
+  errEl.textContent = '';
+
+  if (!/^\d{4}$/.test(passcode)) return setErr('4-digit passcode দাও।');
+
+  btn.classList.add('loading');
+  try {
+    const hash = await simpleHash(passcode);
+    if (hash === tenantData.passcodeHash) {
+      // Save session
+      localStorage.setItem(LS_PREFIX + tenantId, hash);
+      await updateLastLogin(tenantId);
+      unlockApp();
+    } else {
+      setErr('❌ Wrong passcode. Try again.');
+      document.getElementById('loginPasscode').value = '';
+      document.getElementById('loginPasscode').focus();
+    }
+  } catch(e) {
+    setErr('Error: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+function setErr(msg) {
+  const el = document.getElementById('authError');
+  if (el) el.textContent = msg;
+}
+
+function clearSessionAndRefresh() {
+  localStorage.removeItem(LS_PREFIX + tenantId);
+  window.location.reload();
+}
+
+// ══════════════════════════════
+// ▶ UNLOCK APP
+// ══════════════════════════════
+function unlockApp() {
+  sessionActive = true;
+
+  // Auth overlay hide করো
+  document.getElementById('authOverlay').style.display = 'none';
+
+  // App দেখাও
+  document.getElementById('appRoot').style.display = '';
+
+  // From prefix lock করো (tenant id দিয়ে)
+  const prefixInput = document.getElementById('cPrefix');
+  if (prefixInput) {
+    prefixInput.value = tenantId;
+    prefixInput.readOnly = true;
+  }
+
+  // Topbar update করো
+  const topSub = document.getElementById('topbarSub');
+  if (topSub) topSub.textContent = tenantId.toUpperCase() + '@uno.pro.bd';
+
+  // Firebase ready event fire করো (mail loading trigger)
+  window.__tenantId = tenantId;
+  window.dispatchEvent(new Event('tenant-ready'));
+}
+
+// ══════════════════════════════
+// ▶ LOGOUT
+// ══════════════════════════════
+function tenantLogout() {
+  // ── Google-flow tenant হলে Firebase Auth থেকেও সাইন-আউট করো ──
+  if (tenantData && tenantData.ownerUid) {
+    sessionActive = false;
+    window.__tenantId = null;
+    document.getElementById('appRoot').style.display = 'none';
+    document.getElementById('passcodeOverlay').style.display = 'none';
+    document.getElementById('authOverlay').style.display = 'flex';
+
+    const { signOut } = window.__authModule;
+    signOut(window.__auth).then(() => {
+      showGoogleSignInRequired();
+    });
+    return;
+  }
+
+  // ── Legacy passcode-flow tenant ──
+  localStorage.removeItem(LS_PREFIX + tenantId);
+  sessionActive = false;
+  window.__tenantId = null;
+
+  // App hide করো
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('passcodeOverlay').style.display = 'none';
+
+  // Auth overlay দেখাও
+  document.getElementById('authOverlay').style.display = 'flex';
+
+  // Login form দেখাও
+  if (tenantData) showLoginForm(false);
+}
+
+// ══════════════════════════════
+// ▶ PASSCODE LOCK SCREEN (session lock)
+// ══════════════════════════════
+
+function showPasscodeLock(msg) {
+  pcInput = '';
+  updatePcDots();
+  document.getElementById('pcSubText').textContent = msg || 'Enter your passcode to continue';
+  document.getElementById('pcError').textContent = '';
+  document.getElementById('passcodeOverlay').style.display = 'flex';
+}
+
+function hidePcLock() {
+  document.getElementById('passcodeOverlay').style.display = 'none';
+}
+
+function pcPress(val) {
+  if (val === 'DEL') {
+    pcInput = pcInput.slice(0, -1);
+  } else if (val === 'C') {
+    pcInput = '';
+  } else {
+    if (pcInput.length >= 4) return;
+    pcInput += val;
+  }
+  updatePcDots();
+  if (pcInput.length === 4) checkPcPasscode();
+}
+
+function updatePcDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('pcd' + i);
+    if (!d) return;
+    d.classList.toggle('filled', i < pcInput.length);
+    d.classList.remove('error');
+  }
+}
+
+async function checkPcPasscode() {
+  if (!tenantData) return;
+  const hash = await simpleHash(pcInput);
+  if (hash === tenantData.passcodeHash) {
+    hidePcLock();
+    sessionActive = true;
+  } else {
+    for (let i = 0; i < 4; i++) {
+      const d = document.getElementById('pcd' + i);
+      if (d) d.classList.add('error');
+    }
+    document.getElementById('pcError').textContent = 'Wrong passcode.';
+    setTimeout(() => {
+      pcInput = '';
+      updatePcDots();
+      document.getElementById('pcError').textContent = '';
+    }, 650);
+  }
+}
+
+// Keyboard support for passcode lock
+document.addEventListener('keydown', e => {
+  if (document.getElementById('passcodeOverlay').style.display === 'flex') {
+    if (e.key >= '0' && e.key <= '9') pcPress(e.key);
+    else if (e.key === 'Backspace') pcPress('DEL');
+    else if (e.key === 'Escape') pcPress('C');
+  }
+});
+
+// ── Screen lock on tab switch ── (শুধু legacy passcode tenant-এর জন্য; Google-flow tenant-এর কোনো passcode নেই)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && sessionActive && tenantData && tenantData.passcodeHash) {
+    showPasscodeLock('Screen locked. Enter passcode.');
+  }
+});
+
+// ── Screen lock on window blur ──
+window.addEventListener('blur', () => {
+  if (sessionActive && tenantData && tenantData.passcodeHash) {
+    showPasscodeLock('Screen locked. Enter passcode.');
+  }
+});
+
+// ── Shake to lock (mobile) ──
+(function() {
+  let lX=null, lY=null, lZ=null, lastShake=0;
+  window.addEventListener('devicemotion', (e) => {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const {x,y,z} = a;
+    if (lX !== null) {
+      if ((Math.abs(x-lX)+Math.abs(y-lY)+Math.abs(z-lZ)) > 18 && Date.now()-lastShake > 1500) {
+        lastShake = Date.now();
+        if (sessionActive && tenantData && tenantData.passcodeHash) showPasscodeLock('🔒 Shake detected!');
+      }
+    }
+    lX=x; lY=y; lZ=z;
+  });
+})();
+
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP LOGIC — Mail sending, Firebase history, Rich Editor
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+const WORKER = "https://csm-mail-worker.tomar-username.workers.dev"; // ← deploy korar pawa notun Worker URL diye replace koro
+const COLORS = ['#2563eb','#059669','#d97706','#7c3aed','#db2777','#0891b2','#dc2626'];
+
+let b64 = null, fname = null;
+let allMails = [];
+let allInbox = [];
+let currentView = 'sent';
+let firebaseReady = false;
+
+// ─── Tenant ready → load mails ───
+window.addEventListener('tenant-ready', () => {
+  firebaseReady = true;
+  loadMails();
+  loadInbox();
+});
+
+// ─── View switcher (Sent / Inbox) ───
+function switchView(view) {
+  currentView = view;
+  document.getElementById('navSent').classList.toggle('active', view === 'sent');
+  document.getElementById('navInbox').classList.toggle('active', view === 'inbox');
+  document.getElementById('mtabSent').classList.toggle('active', view === 'sent');
+  document.getElementById('mtabInbox').classList.toggle('active', view === 'inbox');
+  document.getElementById('mailRows').style.display = view === 'sent' ? '' : 'none';
+  document.getElementById('inboxRows').style.display = view === 'inbox' ? '' : 'none';
+  document.querySelector('.topbar-title').textContent = view === 'sent' ? 'Sent Broadcasts' : 'Inbox';
+  document.querySelector('.table-title').textContent = view === 'sent' ? 'Transmission Log' : 'Received Mails';
+  if (view === 'inbox') loadInbox();
+}
+
+// ─── Helpers ───
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function avatar(email) {
+  const c = COLORS[email.charCodeAt(0) % COLORS.length];
+  return `<div class="row-avatar" style="background:${c}">${esc(email[0].toUpperCase())}</div>`;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString([],{day:'numeric',month:'short'});
+}
+
+function toast(type, msg) {
+  const w = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  const icons = { success:'✓', error:'✕', info:'ℹ' };
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${icons[type]||'•'}</span> ${msg}`;
+  w.appendChild(t);
+  setTimeout(() => {
+    t.style.opacity='0'; t.style.transform='translateY(6px)';
+    t.style.transition='.3s'; setTimeout(()=>t.remove(),300);
+  }, 3500);
+}
+
+// ─── File Attach ───
+document.getElementById('fileInput').addEventListener('change', function() {
+  const f = this.files[0];
+  if (!f) return;
+  if (f.size > 5*1024*1024) { toast('error','Max 5MB allowed'); return; }
+  fname = f.name;
+  const r = new FileReader();
+  r.onload = e => { b64 = e.target.result.split(',')[1]; };
+  r.readAsDataURL(f);
+  document.getElementById('attachName').textContent = f.name;
+  document.getElementById('attachChip').style.display = 'flex';
+});
+
+function clearAttach() {
+  b64 = null; fname = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('attachChip').style.display = 'none';
+}
+
+// ─── Compose Open/Close ───
+function openCompose() {
+  // Security: auth না হলে compose খুলবে না
+  if (!sessionActive) { toast('error', 'Please sign in first.'); return; }
+  document.getElementById('composeOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('cTo').focus(), 200);
+}
+
+function closeCompose() {
+  document.getElementById('composeOverlay').classList.remove('open');
+}
+
+function bgClose(e) {
+  if (e.target.id === 'composeOverlay') closeCompose();
+}
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('passcodeOverlay').style.display === 'flex') return;
+  if (document.getElementById('authOverlay').style.display !== 'none') return;
+  if (e.key === 'Escape') { closeCompose(); closeDetail(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doSend();
+});
+
+// ─── SEND ───
+async function doSend() {
+  // Security check
+  if (!sessionActive || !window.__tenantId) {
+    toast('error', 'Authentication required.'); return;
+  }
+
+  const to      = document.getElementById('cTo').value.trim();
+  const name    = document.getElementById('cName').value.trim();
+  const prefix  = document.getElementById('cPrefix').value.trim(); // auto-locked to tenantId
+  const reply   = document.getElementById('cReply').value.trim();
+  const subject = document.getElementById('cSubject').value.trim();
+  const bodyEl  = document.getElementById('cBody');
+  const body    = bodyEl.innerHTML.trim();
+  const bodyText = bodyEl.innerText.trim();
+
+  if (!to || !name || !prefix || !subject || !bodyText) {
+    toast('error', 'Fill all required fields'); return;
+  }
+
+  const btn = document.getElementById('sendBtn');
+  btn.classList.add('loading');
+
+  const payload = {
+    fromName: name, fromPrefix: prefix,
+    replyTo: reply, toEmail: to,
+    subject, bodyType: 'html', content: body,
+    attachment: b64 ? { content: b64, filename: fname } : null
+  };
+
+  try {
+    const res = await fetch(WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      await saveToFirebase({ ...payload, hasAttachment: !!b64, sentAt: window.__fsModule.serverTimestamp() });
+      toast('success', '🚀 Broadcast delivered!');
+      closeCompose();
+      document.getElementById('cTo').value = '';
+      document.getElementById('cSubject').value = '';
+      document.getElementById('cBody').innerHTML = '';
+      clearAttach();
+      loadMails();
+    } else {
+      toast('error', 'Error: ' + (result.error || 'Unknown'));
+    }
+  } catch(err) {
+    toast('error', 'Worker connection failed');
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+// ─── RICH EDITOR ───
+let savedRange = null;
+
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  const body = document.getElementById('cBody');
+  if (body && sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    if (body.contains(range.commonAncestorContainer)) {
+      savedRange = range.cloneRange();
+    }
+  }
+});
+
+function restoreSelection() {
+  const body = document.getElementById('cBody');
+  body.focus();
+  if (savedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+}
+
+function fmt(cmd, val) {
+  restoreSelection();
+  document.execCommand(cmd, false, val || null);
+  document.getElementById('cBody').focus();
+}
+
+function insertLink() {
+  const url = prompt('Enter URL:', 'https://');
+  if (!url) return;
+  restoreSelection();
+  const sel = window.getSelection();
+  const text = sel && !sel.isCollapsed ? null : (prompt('Link text:', url) || url);
+  if (text) {
+    document.execCommand('insertHTML', false,
+      `<a href="${url}" target="_blank" style="color:#2563eb;">${text}</a>`);
+  } else {
+    document.execCommand('createLink', false, url);
+    const links = document.getElementById('cBody').querySelectorAll('a[href="' + url + '"]');
+    links.forEach(a => a.target = '_blank');
+  }
+  document.getElementById('cBody').focus();
+}
+
+function insertImage() {
+  const url = prompt('Image URL:');
+  if (!url) return;
+  restoreSelection();
+  document.execCommand('insertHTML', false,
+    `<img src="${url}" style="max-width:100%;border-radius:6px;display:block;margin:6px 0;" alt="">`);
+  document.getElementById('cBody').focus();
+}
+
+// ─── Paste: preserve HTML ───
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.getElementById('cBody');
+  if (!body) return;
+  body.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const cd = e.clipboardData || window.clipboardData;
+    if (cd.types.includes('text/html')) {
+      const html = cd.getData('text/html');
+      const clean = sanitizePastedHTML(html);
+      document.execCommand('insertHTML', false, clean);
+    } else {
+      const text = cd.getData('text/plain') || '';
+      const escaped = text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g,'<br>');
+      document.execCommand('insertHTML', false, escaped);
+    }
+  });
+});
+
+function sanitizePastedHTML(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('script,style,meta,link,head,html,body').forEach(el => {
+    if (el.tagName === 'BODY' || el.tagName === 'HTML') el.replaceWith(...el.childNodes);
+    else el.remove();
+  });
+  tmp.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+      if (attr.name === 'href' && attr.value.toLowerCase().startsWith('javascript:'))
+        el.removeAttribute('href');
+    });
+  });
+  return tmp.innerHTML;
+}
+
+// ─── Save to Firebase (tenant-scoped) ───
+async function saveToFirebase(data) {
+  if (!firebaseReady || !window.__tenantId) return;
+  const { collection, addDoc } = window.__fsModule;
+  const db = window.__db;
+  const toSave = { ...data };
+  delete toSave.attachment;
+  toSave.hasAttachment = !!data.attachment;
+  // Tenant ID যোগ করো — isolation এর জন্য
+  toSave.tenantId = window.__tenantId;
+  await addDoc(collection(db, 'broadcasts'), toSave);
+}
+
+// ─── Load Mails (tenant-scoped) ───
+async function loadMails() {
+  if (!firebaseReady || !window.__tenantId) return;
+
+  const rb = document.getElementById('refreshBtn');
+  rb.classList.add('spinning');
+
+  try {
+    const { collection, getDocs, orderBy, query, where } = window.__fsModule;
+    const db = window.__db;
+    // শুধু এই tenant-এর mails ফিল্টার করো
+    const q = query(
+      collection(db, 'broadcasts'),
+      where('tenantId', '==', window.__tenantId),
+      orderBy('sentAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    allMails = [];
+    snap.forEach(doc => allMails.push({ id: doc.id, ...doc.data() }));
+    renderMails();
+  } catch(e) {
+    document.getElementById('mailRows').innerHTML = `
+      <div class="empty-box">
+        <div class="empty-emoji">🔧</div>
+        <div class="empty-h">Firebase Config Needed</div>
+        <div class="empty-p">Firestore-এ <code>broadcasts</code> collection-এ <code>tenantId</code> field-এর জন্য composite index প্রয়োজন হতে পারে।</div>
+      </div>`;
+  } finally {
+    rb.classList.remove('spinning');
+  }
+}
+
+// ─── Render Mails ───
+// ─── Load Inbox (tenant-scoped, received mails via Resend inbound → Worker → Firestore) ───
+async function loadInbox() {
+  if (!firebaseReady || !window.__tenantId) return;
+
+  try {
+    const { collection, getDocs, orderBy, query, where } = window.__fsModule;
+    const db = window.__db;
+    const q = query(
+      collection(db, 'inbox'),
+      where('tenantId', '==', window.__tenantId)
+    );
+    const snap = await getDocs(q);
+    allInbox = [];
+    snap.forEach(doc => allInbox.push({ id: doc.id, ...doc.data() }));
+    // newest first (receivedAt is a string ISO date, no composite index needed)
+    allInbox.sort((a, b) => new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0));
+    renderInbox();
+  } catch (e) {
+    document.getElementById('inboxRows').innerHTML = `
+      <div class="empty-box">
+        <div class="empty-emoji">🔧</div>
+        <div class="empty-h">Inbox load failed</div>
+        <div class="empty-p">Firestore-এ <code>inbox</code> collection আছে কিনা, এবং Firestore rules-এ read allow করা আছে কিনা চেক করো।</div>
+      </div>`;
+  }
+}
+
+function renderInbox() {
+  const container = document.getElementById('inboxRows');
+  const total = allInbox.length;
+  document.getElementById('sideCountInbox').textContent = total;
+
+  if (!total) {
+    container.innerHTML = `
+      <div class="empty-box">
+        <div class="empty-emoji">📥</div>
+        <div class="empty-h">No mails received yet</div>
+        <div class="empty-p">কেউ তোমার ${window.__tenantId || 'your'}@uno.pro.bd ঠিকানায় মেইল পাঠালে এখানে দেখা যাবে।</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = allInbox.map((m, i) => `
+    <div class="mail-row" onclick="openInboxDetail(${i})" style="animation-delay:${i*0.04}s">
+      ${avatar(m.fromEmail || '?')}
+      <div class="row-to">
+        <div class="row-email">${esc(m.fromEmail)}</div>
+        <div class="row-name">${esc(m.fromName)}</div>
+      </div>
+      <div class="row-subject">${esc(m.subject)}</div>
+      <div class="row-time">${fmtTime(m.receivedAt)}</div>
+      <div class="row-tags">
+        <span class="tag tag-blue">📥 Received</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openInboxDetail(i) {
+  const m = allInbox[i];
+  document.getElementById('dSubject').textContent = m.subject || '(No Subject)';
+  document.getElementById('dMeta').innerHTML = `
+    <div class="meta-chip"><b>From:</b>&nbsp;${esc(m.fromName)} &lt;${esc(m.fromEmail)}&gt;</div>
+    <div class="meta-chip"><b>To:</b>&nbsp;${esc(m.toEmail)}</div>
+    <div class="meta-chip"><b>Received:</b>&nbsp;${fmtTime(m.receivedAt)}</div>
+  `;
+  const body = document.getElementById('dBody');
+  body.innerHTML = m.html ? m.html : '<pre style="white-space:pre-wrap;font-family:monospace;font-size:13px;">' + esc(m.text) + '</pre>';
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function renderMails() {
+  const container = document.getElementById('mailRows');
+  const total = allMails.length;
+  const htmlCount = allMails.filter(m => m.bodyType === 'html').length;
+  const attachCount = allMails.filter(m => m.hasAttachment).length;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statHtml').textContent = htmlCount;
+  document.getElementById('statAttach').textContent = attachCount;
+  document.getElementById('tableCount').textContent = total + ' entries';
+  document.getElementById('sideCount').textContent = total;
+
+  if (!total) {
+    container.innerHTML = `
+      <div class="empty-box">
+        <div class="empty-emoji">📭</div>
+        <div class="empty-h">No transmissions yet</div>
+        <div class="empty-p">Click Compose to send your first broadcast. It will appear here instantly.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = allMails.map((m, i) => `
+    <div class="mail-row" onclick="openDetail(${i})" style="animation-delay:${i*0.04}s">
+      ${avatar(m.toEmail || '?')}
+      <div class="row-to">
+        <div class="row-email">${esc(m.toEmail)}</div>
+        <div class="row-name">${esc(m.fromName)}</div>
+      </div>
+      <div class="row-subject">${esc(m.subject)}</div>
+      <div class="row-time">${fmtTime(m.sentAt)}</div>
+      <div class="row-tags">
+        <span class="tag tag-green">✓ Sent</span>
+        ${m.bodyType==='html' ? '<span class="tag tag-blue">HTML</span>' : '<span class="tag tag-gray">Text</span>'}
+        ${m.hasAttachment ? '<span class="tag tag-amber">📎</span>' : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Detail Modal ───
+function openDetail(i) {
+  const m = allMails[i];
+  document.getElementById('dSubject').textContent = m.subject || '(No Subject)';
+
+  const t = fmtTime(m.sentAt);
+  document.getElementById('dMeta').innerHTML = `
+    <div class="meta-chip"><b>From:</b>&nbsp;${esc(m.fromName)} &lt;${esc(m.fromPrefix)}@uno.pro.bd&gt;</div>
+    <div class="meta-chip"><b>To:</b>&nbsp;${esc(m.toEmail)}</div>
+    <div class="meta-chip"><b>Sent:</b>&nbsp;${t}</div>
+    ${m.hasAttachment ? '<div class="meta-chip">📎 Attachment</div>' : ''}
+  `;
+
+  const body = document.getElementById('dBody');
+  if (m.bodyType === 'html') {
+    body.innerHTML = m.content || '';
+  } else {
+    body.innerHTML = '<pre style="white-space:pre-wrap;font-family:monospace;font-size:13px;">' + esc(m.content) + '</pre>';
+  }
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+function bgCloseDetail(e) {
+  if (e.target.id === 'detailOverlay') closeDetail();
+}
+</script>
+</body>
+</html>
