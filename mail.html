@@ -1104,6 +1104,7 @@ body::before {
 .passcode-logout-btn:hover { color: var(--red); }
 
 /* ─── MOBILE ─── */
+.mobile-view-tabs { display: none; }
 @media (max-width: 900px) {
   .sidebar { width: 220px; }
   .main { margin-left: 220px; }
@@ -1117,6 +1118,16 @@ body::before {
   .mail-row { grid-template-columns: 32px 1fr 70px; }
   .mail-row .row-subject, .mail-row .row-tags { display: none; }
   .auth-card { padding: 30px 22px; }
+  .mobile-view-tabs {
+    display: flex; gap: 8px; padding: 10px 16px 0 16px;
+  }
+  .mobile-tab {
+    flex: 1; text-align: center; padding: 9px 10px; border-radius: 10px;
+    font-size: 12.5px; font-weight: 700; font-family: var(--font-display);
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-3);
+    cursor: pointer;
+  }
+  .mobile-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 }
 </style>
 </head>
@@ -1246,6 +1257,11 @@ body::before {
         </svg>
       </button>
     </div>
+  </div>
+
+  <div class="mobile-view-tabs">
+    <button class="mobile-tab active" id="mtabSent" onclick="switchView('sent')">📤 Sent</button>
+    <button class="mobile-tab" id="mtabInbox" onclick="switchView('inbox')">📥 Inbox</button>
   </div>
 
   <div class="inbox-body">
@@ -2040,7 +2056,7 @@ window.addEventListener('blur', () => {
      APP LOGIC — Mail sending, Firebase history, Rich Editor
      ═══════════════════════════════════════════════════════════════ -->
 <script>
-const WORKER = "https://uno.uno-pro-bd.workers.dev/"; // ← deploy korar pawa notun Worker URL diye replace koro
+const WORKER = "https://csm-mail-worker.tomar-username.workers.dev"; // ← deploy korar pawa notun Worker URL diye replace koro
 const COLORS = ['#2563eb','#059669','#d97706','#7c3aed','#db2777','#0891b2','#dc2626'];
 
 let b64 = null, fname = null;
@@ -2061,6 +2077,8 @@ function switchView(view) {
   currentView = view;
   document.getElementById('navSent').classList.toggle('active', view === 'sent');
   document.getElementById('navInbox').classList.toggle('active', view === 'inbox');
+  document.getElementById('mtabSent').classList.toggle('active', view === 'sent');
+  document.getElementById('mtabInbox').classList.toggle('active', view === 'inbox');
   document.getElementById('mailRows').style.display = view === 'sent' ? '' : 'none';
   document.getElementById('inboxRows').style.display = view === 'inbox' ? '' : 'none';
   document.querySelector('.topbar-title').textContent = view === 'sent' ? 'Sent Broadcasts' : 'Inbox';
