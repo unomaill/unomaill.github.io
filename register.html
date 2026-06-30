@@ -559,7 +559,7 @@ async function routeAfterAuth(user) {
       showStep('stepExisting');
       // ── সরাসরি mail panel-এ redirect করো ──
       setTimeout(() => {
-        window.location.href = 'index.html?id=' + encodeURIComponent(existing.id);
+        window.location.href = 'mail?id=' + encodeURIComponent(existing.id);
       }, 900);
     } else {
       document.getElementById('acctChip').innerHTML = acctChipHTML(user);
