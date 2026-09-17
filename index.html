@@ -8,41 +8,101 @@
 </head>
 <body>
 
+  <!-- Step 1: Google sign-in -->
   <div id="login-screen" class="screen">
     <div class="card">
       <h1>uno.pro.bd</h1>
-      <p>Get a free @uno.pro.bd email address.</p>
+      <p>Get a free, permanent @uno.pro.bd email address.</p>
       <button id="google-signin-btn">Sign in with Google</button>
     </div>
   </div>
 
+  <!-- Step 2: one-time permanent username claim -->
+  <div id="username-screen" class="screen hidden">
+    <div class="card">
+      <h1>Choose your address</h1>
+      <p>This is permanent and can't be changed later.</p>
+      <div class="username-row">
+        <input id="username-input" type="text" placeholder="yourname" autocomplete="off" />
+        <span class="domain-suffix">@uno.pro.bd</span>
+      </div>
+      <div id="username-status" class="status-text"></div>
+      <button id="claim-btn" disabled>Claim my email</button>
+    </div>
+  </div>
+
+  <!-- Step 3: main app -->
   <div id="app-screen" class="screen hidden">
     <header>
-      <div>
+      <div class="identity">
         <strong id="user-name"></strong>
         <div id="alias-display" class="alias"></div>
       </div>
-      <button id="signout-btn">Sign out</button>
+      <div class="header-actions">
+        <button id="settings-btn" class="ghost-btn">Settings</button>
+        <button id="signout-btn">Sign out</button>
+      </div>
     </header>
+
+    <!-- Settings: sender display name -->
+    <div id="settings-panel" class="panel floating hidden">
+      <h2>Sender name</h2>
+      <p class="hint">Shown to recipients, e.g. <em>MD. Nasir Uddin</em>.</p>
+      <input id="sender-name-input" type="text" placeholder="Your full name" maxlength="60" />
+      <div class="row-actions">
+        <button id="save-sender-name-btn">Save</button>
+        <button id="close-settings-btn" class="ghost-btn">Close</button>
+      </div>
+      <div id="sender-name-status" class="status-text"></div>
+    </div>
 
     <main>
       <section class="panel">
-        <h2>Compose</h2>
+        <div class="panel-header">
+          <h2 id="compose-title">Compose</h2>
+          <button id="cancel-reply-btn" class="ghost-btn hidden">Cancel reply</button>
+        </div>
         <input id="compose-to" type="email" placeholder="To" />
         <input id="compose-subject" type="text" placeholder="Subject" />
-        <textarea id="compose-body" rows="5" placeholder="Message"></textarea>
+
+        <div class="editor-toolbar">
+          <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+          <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+          <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&#8226; List</button>
+          <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+          <button type="button" data-cmd="createLink" title="Insert link">Link</button>
+          <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+        </div>
+        <div id="compose-body" class="editor-body" contenteditable="true" data-placeholder="Write your message..."></div>
+
         <button id="send-btn">Send</button>
-        <div id="send-status"></div>
+        <div id="send-status" class="status-text"></div>
       </section>
 
       <section class="panel">
         <div class="panel-header">
           <h2>Inbox</h2>
-          <button id="refresh-btn">Refresh</button>
+          <button id="refresh-btn" class="ghost-btn">Refresh</button>
         </div>
         <div id="inbox-list"></div>
       </section>
     </main>
+  </div>
+
+  <!-- Email detail modal -->
+  <div id="email-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="close-modal-btn" class="ghost-btn modal-close">&times;</button>
+      <h2 id="modal-subject"></h2>
+      <div class="modal-meta">
+        <div><span class="meta-label">From:</span> <span id="modal-from"></span></div>
+        <div><span class="meta-label">To:</span> <span id="modal-to"></span></div>
+        <div><span class="meta-label">Date:</span> <span id="modal-date"></span></div>
+      </div>
+      <iframe id="modal-body-frame" class="modal-body-frame" sandbox="allow-same-origin"></iframe>
+      <button id="modal-reply-btn">Reply</button>
+    </div>
   </div>
 
   <!-- Firebase (client SDK, no secrets exposed) -->

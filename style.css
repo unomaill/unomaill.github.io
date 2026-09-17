@@ -22,7 +22,7 @@ body {
   max-width: 360px;
 }
 .card h1 { margin: 0 0 8px; }
-.card button, #signout-btn, #send-btn, #refresh-btn {
+.card button, #signout-btn, #send-btn, #claim-btn, #save-sender-name-btn, #modal-reply-btn {
   background: #1a73e8;
   color: #fff;
   border: none;
@@ -33,6 +33,7 @@ body {
   margin-top: 12px;
 }
 #signout-btn { background: #999; margin-top: 0; }
+button:disabled { background: #ccc !important; cursor: not-allowed; }
 
 header {
   display: flex;
@@ -85,3 +86,134 @@ input, textarea {
 .message .from { font-weight: 600; }
 .message .subject { color: #333; }
 .message .time { font-size: 12px; color: #888; }
+
+/* ---------------------------- username onboarding --------------------------- */
+.username-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.username-row input {
+  border: none;
+  margin: 0;
+  flex: 1;
+}
+.domain-suffix {
+  padding: 0 12px;
+  color: #888;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.status-text { font-size: 13px; min-height: 18px; margin: 6px 0; color: #666; }
+.status-text.success { color: #1a7f37; }
+.status-text.error { color: #c0392b; }
+
+/* -------------------------------- header ------------------------------------ */
+.identity { display: flex; flex-direction: column; }
+.header-actions { display: flex; gap: 8px; }
+.ghost-btn {
+  background: transparent;
+  color: #1a73e8;
+  border: 1px solid #1a73e8;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ------------------------------- floating panel ------------------------------ */
+.panel.floating {
+  position: absolute;
+  right: 24px;
+  top: 70px;
+  width: 300px;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.hint { font-size: 13px; color: #888; margin-top: 0; }
+.row-actions { display: flex; gap: 8px; }
+.row-actions button { margin-top: 0; }
+
+/* -------------------------------- editor ------------------------------------- */
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.editor-toolbar button {
+  background: #f0f1f3;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 0;
+}
+.editor-toolbar button:hover { background: #e4e6e9; }
+.editor-body {
+  min-height: 140px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+.editor-body:empty:before {
+  content: attr(data-placeholder);
+  color: #999;
+}
+
+/* -------------------------------- messages ------------------------------------ */
+.message { cursor: pointer; transition: background 0.1s; border-radius: 6px; padding: 12px; }
+.message:hover { background: #f5f8ff; }
+.message .snippet { color: #777; font-size: 13px; margin-top: 2px; }
+
+/* ---------------------------------- modal -------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  width: min(680px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.modal-meta { font-size: 13px; color: #555; margin-bottom: 12px; }
+.meta-label { font-weight: 600; color: #333; }
+.modal-body-frame {
+  flex: 1;
+  min-height: 260px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  width: 100%;
+}
+#modal-reply-btn { align-self: flex-start; margin-top: 14px; }
