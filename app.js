@@ -61,20 +61,25 @@ onAuthStateChanged(auth, async (user) => {
   displayNameOfUser = user.displayName || user.email || "";
 
   withSpinner(async () => {
-    const res = await authedFetch("/api/register", { method: "POST", body: "{}" });
-    const data = await res.json();
+    try {
+      const res = await authedFetch("/api/register", { method: "POST", body: "{}" });
+      const data = await res.json();
 
-    if (res.status === 400 || !data.alias) {
-      showScreen(usernameScreen);
-      return;
+      if (res.status === 400 || !data.alias) {
+        showScreen(usernameScreen);
+        return;
+      }
+
+      currentAlias = data.alias;
+      currentSenderName = data.senderName || "";
+      senderNameInput.value = currentSenderName;
+      setupAppShell();
+      showScreen(appScreen);
+      render();
+    } catch (err) {
+      alert("Login failed: " + (err && err.message ? err.message : err));
+      showScreen(loginScreen);
     }
-
-    currentAlias = data.alias;
-    currentSenderName = data.senderName || "";
-    senderNameInput.value = currentSenderName;
-    setupAppShell();
-    showScreen(appScreen);
-    render();
   });
 });
 
