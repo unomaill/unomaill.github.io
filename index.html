@@ -2,110 +2,122 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>uno.pro.bd Mail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Step 1: Google sign-in -->
+  <!-- Global premium loading overlay -->
+  <div id="global-spinner" class="spinner-overlay hidden">
+    <div class="spinner-ring"></div>
+  </div>
+
+  <!-- Screen 1: Google sign-in -->
   <div id="login-screen" class="screen">
-    <div class="card">
-      <h1>uno.pro.bd</h1>
-      <p>Get a free, permanent @uno.pro.bd email address.</p>
-      <button id="google-signin-btn">Sign in with Google</button>
+    <div class="auth-card">
+      <div class="brand-mark">U</div>
+      <h1>uno<span class="accent">.pro.bd</span></h1>
+      <p>A free, permanent, professional email address — built for you.</p>
+      <button id="google-signin-btn" class="btn btn-primary btn-block">
+        <span class="g-icon">G</span> Continue with Google
+      </button>
     </div>
   </div>
 
-  <!-- Step 2: one-time permanent username claim -->
+  <!-- Screen 2: one-time permanent username claim -->
   <div id="username-screen" class="screen hidden">
-    <div class="card">
-      <h1>Choose your address</h1>
-      <p>This is permanent and can't be changed later.</p>
-      <div class="username-row">
-        <input id="username-input" type="text" placeholder="yourname" autocomplete="off" />
+    <div class="auth-card">
+      <h1>Claim your address</h1>
+      <p>Choose carefully — this is permanent.</p>
+      <div class="field-group username-field">
+        <input id="username-input" class="field-input" type="text" placeholder=" " autocomplete="off" />
+        <label class="field-label">username</label>
         <span class="domain-suffix">@uno.pro.bd</span>
       </div>
       <div id="username-status" class="status-text"></div>
-      <button id="claim-btn" disabled>Claim my email</button>
+      <button id="claim-btn" class="btn btn-primary btn-block" disabled>Claim my email</button>
     </div>
   </div>
 
-  <!-- Step 3: main app -->
+  <!-- Screen 3: main app shell -->
   <div id="app-screen" class="screen hidden">
-    <header>
-      <div class="identity">
-        <strong id="user-name"></strong>
-        <div id="alias-display" class="alias"></div>
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="Menu">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="search-input" type="text" placeholder="Search mail" autocomplete="off" />
       </div>
-      <div class="header-actions">
-        <button id="settings-btn" class="ghost-btn">Settings</button>
-        <button id="signout-btn">Sign out</button>
-      </div>
+      <button id="avatar-btn" class="avatar-btn" aria-label="Account"></button>
     </header>
 
-    <!-- Settings: sender display name -->
-    <div id="settings-panel" class="panel floating hidden">
+    <!-- Slide-out drawer: folders + account -->
+    <div id="drawer-overlay" class="drawer-overlay hidden"></div>
+    <nav id="drawer" class="drawer">
+      <div class="drawer-profile">
+        <div id="drawer-avatar" class="avatar-lg"></div>
+        <div>
+          <div id="drawer-name" class="drawer-name"></div>
+          <div id="drawer-alias" class="drawer-alias"></div>
+        </div>
+      </div>
+      <button class="drawer-item" data-nav="inbox">
+        <svg viewBox="0 0 24 24"><path d="M3 8l9 6 9-6M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+        Inbox <span id="count-inbox" class="drawer-count"></span>
+      </button>
+      <button class="drawer-item" data-nav="sent">
+        <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+        Sent
+      </button>
+      <button class="drawer-item" data-nav="archive">
+        <svg viewBox="0 0 24 24"><path d="M3 4h18v4H3V4zm1 5h16v11H4V9zm5 3h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+        Archive
+      </button>
+      <button class="drawer-item" data-nav="trash">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6h12z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+        Trash
+      </button>
+      <div class="drawer-divider"></div>
+      <button class="drawer-item" data-action="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        Settings
+      </button>
+      <button class="drawer-item drawer-signout" data-action="signout">
+        <svg viewBox="0 0 24 24"><path d="M16 17l5-5-5-5M21 12H9M12 3H5a1 1 0 00-1 1v16a1 1 0 001 1h7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sign out
+      </button>
+    </nav>
+
+    <!-- Routed content -->
+    <main id="content" class="content"></main>
+
+    <!-- Floating compose button -->
+    <button id="fab-compose" class="fab">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span>Compose</span>
+    </button>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <button class="modal-close" data-close-settings>&times;</button>
       <h2>Sender name</h2>
       <p class="hint">Shown to recipients, e.g. <em>MD. Nasir Uddin</em>.</p>
-      <input id="sender-name-input" type="text" placeholder="Your full name" maxlength="60" />
-      <div class="row-actions">
-        <button id="save-sender-name-btn">Save</button>
-        <button id="close-settings-btn" class="ghost-btn">Close</button>
+      <div class="field-group">
+        <input id="sender-name-input" class="field-input" type="text" placeholder=" " maxlength="60" />
+        <label class="field-label">Full name</label>
       </div>
+      <button id="save-sender-name-btn" class="btn btn-primary btn-block">Save</button>
       <div id="sender-name-status" class="status-text"></div>
     </div>
-
-    <main>
-      <section class="panel">
-        <div class="panel-header">
-          <h2 id="compose-title">Compose</h2>
-          <button id="cancel-reply-btn" class="ghost-btn hidden">Cancel reply</button>
-        </div>
-        <input id="compose-to" type="email" placeholder="To" />
-        <input id="compose-subject" type="text" placeholder="Subject" />
-
-        <div class="editor-toolbar">
-          <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
-          <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
-          <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
-          <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&#8226; List</button>
-          <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
-          <button type="button" data-cmd="createLink" title="Insert link">Link</button>
-          <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
-        </div>
-        <div id="compose-body" class="editor-body" contenteditable="true" data-placeholder="Write your message..."></div>
-
-        <button id="send-btn">Send</button>
-        <div id="send-status" class="status-text"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Inbox</h2>
-          <button id="refresh-btn" class="ghost-btn">Refresh</button>
-        </div>
-        <div id="inbox-list"></div>
-      </section>
-    </main>
   </div>
 
-  <!-- Email detail modal -->
-  <div id="email-modal" class="modal-overlay hidden">
-    <div class="modal">
-      <button id="close-modal-btn" class="ghost-btn modal-close">&times;</button>
-      <h2 id="modal-subject"></h2>
-      <div class="modal-meta">
-        <div><span class="meta-label">From:</span> <span id="modal-from"></span></div>
-        <div><span class="meta-label">To:</span> <span id="modal-to"></span></div>
-        <div><span class="meta-label">Date:</span> <span id="modal-date"></span></div>
-      </div>
-      <iframe id="modal-body-frame" class="modal-body-frame" sandbox="allow-same-origin"></iframe>
-      <button id="modal-reply-btn">Reply</button>
-    </div>
-  </div>
-
-  <!-- Firebase (client SDK, no secrets exposed) -->
   <script type="module" src="firebase-config.js"></script>
   <script type="module" src="app.js"></script>
 </body>
