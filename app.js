@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // Change this to your deployed Worker URL.
-const WORKER_URL = "https://uno.csm-mohasin.workers.dev";
+const WORKER_URL = "https://REPLACE_WITH_YOUR_WORKER.workers.dev";
 
 const auth = getAuth(firebaseApp);
 const provider = new GoogleAuthProvider();
@@ -635,15 +635,21 @@ async function renderCompose(params) {
     }
   }
 
-  const fromPicker =
-    currentAliases.length > 1
-      ? `<div class="field-group">
-          <select id="compose-from" class="field-input" style="padding-top:14px;">
-            ${currentAliases.map((a) => `<option value="${escapeAttr(a)}" ${a === currentAlias ? "selected" : ""}>${escapeHtml(a)}</option>`).join("")}
-          </select>
-          <label class="field-label" style="top:5px;font-size:11px;color:var(--accent-1);font-weight:600;">From</label>
-        </div>`
-      : "";
+  const primaryLocalPart = (currentAlias.split("@")[0] || "");
+  const fromPicker = isAdmin
+    ? `<div class="field-group username-field" style="text-align:left;">
+        <input id="compose-from-nick" class="field-input" type="text" placeholder=" " value="${escapeAttr(primaryLocalPart)}" />
+        <label class="field-label">From (any nickname)</label>
+        <span class="domain-suffix">@uno.pro.bd</span>
+      </div>`
+    : currentAliases.length > 1
+    ? `<div class="field-group">
+        <select id="compose-from" class="field-input" style="padding-top:14px;">
+          ${currentAliases.map((a) => `<option value="${escapeAttr(a)}" ${a === currentAlias ? "selected" : ""}>${escapeHtml(a)}</option>`).join("")}
+        </select>
+        <label class="field-label" style="top:5px;font-size:11px;color:var(--accent-1);font-weight:600;">From</label>
+      </div>`
+    : "";
 
   contentEl.innerHTML = `
     <div class="detail-header"><button class="icon-btn" id="back-btn">&larr;</button><h2>${mode === "reply" ? "Reply" : "New message"}</h2></div>
@@ -705,8 +711,9 @@ async function renderCompose(params) {
     statusEl.textContent = "Sending...";
     statusEl.className = "status-text";
 
-    const fromEl = document.getElementById("compose-from");
-    const fromAlias = fromEl ? fromEl.value : undefined;
+    const nickEl = document.getElementById("compose-from-nick");
+    const selectEl = document.getElementById("compose-from");
+    const fromAlias = nickEl ? nickEl.value.trim() : selectEl ? selectEl.value : undefined;
 
     const res = await withSpinner(() =>
       authedFetch("/api/send", { method: "POST", body: JSON.stringify({ to, subject, text, html, fromAlias }) })
