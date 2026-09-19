@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // Change this to your deployed Worker URL.
-const WORKER_URL = "https://REPLACE_WITH_YOUR_WORKER.workers.dev";
+const WORKER_URL = "https://uno.csm-mohasin.workers.dev";
 
 const auth = getAuth(firebaseApp);
 const provider = new GoogleAuthProvider();
