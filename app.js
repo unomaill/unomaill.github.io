@@ -261,20 +261,25 @@ async function render() {
   if (appScreen.classList.contains("hidden")) return; // not logged in yet
   const params = currentParams();
 
-  if (params.get("compose")) {
-    await renderCompose(params);
-    return;
+  try {
+    if (params.get("compose")) {
+      await renderCompose(params);
+      return;
+    }
+    if (params.get("email")) {
+      await renderDetail(params);
+      return;
+    }
+    const view = params.get("view") || "inbox";
+    if (view === "admin") {
+      await renderAdmin();
+      return;
+    }
+    await renderList(view);
+  } catch (err) {
+    console.error(err);
+    contentEl.innerHTML = `<div class="empty-state">Something went wrong: ${escapeHtml(err.message || String(err))}</div>`;
   }
-  if (params.get("email")) {
-    await renderDetail(params);
-    return;
-  }
-  const view = params.get("view") || "inbox";
-  if (view === "admin") {
-    await renderAdmin();
-    return;
-  }
-  await renderList(view);
 }
 
 /* ------------------------------ token helper -------------------------------- */
@@ -635,7 +640,7 @@ async function renderCompose(params) {
     }
   }
 
-  const primaryLocalPart = (currentAlias.split("@")[0] || "");
+  const primaryLocalPart = ((currentAlias || "").split("@")[0] || "");
   const fromPicker = isAdmin
     ? `<div class="field-group username-field" style="text-align:left;">
         <input id="compose-from-nick" class="field-input" type="text" placeholder=" " value="${escapeAttr(primaryLocalPart)}" />
