@@ -455,8 +455,61 @@ function skeletonHtml() {
 
 async function renderAdmin() {
   highlightDrawer("admin");
-  contentEl.innerHTML = `<div class="folder-title">Admin</div><div id="admin-slot">${skeletonHtml()}</div>`;
+  contentEl.innerHTML = `
+    <div class="folder-title">Admin</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="chip-btn" data-admin-tab="users">Manage users</button>
+      <button class="chip-btn" data-admin-tab="allmail">All mail (@domain)</button>
+    </div>
+    <div id="admin-slot">${skeletonHtml()}</div>
+  `;
 
+  document.querySelectorAll("[data-admin-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.adminTab === "users") renderAdminUsers();
+      else renderAdminAllMail();
+    });
+  });
+
+  await renderAdminUsers();
+}
+
+async function renderAdminAllMail() {
+  const slot = document.getElementById("admin-slot");
+  slot.innerHTML = skeletonHtml();
+
+  const res = await authedFetch("/api/admin/inbox");
+  const data = await res.json();
+
+  if (!res.ok) {
+    slot.innerHTML = `<div class="empty-state">${escapeHtml(data.error || "Failed to load")}</div>`;
+    return;
+  }
+
+  const messages = (data.messages || []).slice().sort(
+    (a, b) => new Date(b.receivedAt) - new Date(a.receivedAt)
+  );
+
+  if (messages.length === 0) {
+    slot.innerHTML = `<div class="empty-state"><div class="emoji">\u{1F4EC}</div>No mail received yet</div>`;
+    return;
+  }
+
+  slot.innerHTML = messages
+    .map(
+      (m) => `
+      <div class="detail-card" style="margin-bottom:10px;">
+        <div style="font-size:12px;color:var(--text-dim);">${formatTime(m.receivedAt)}</div>
+        <div style="font-weight:700;">${escapeHtml(m.subject || "(no subject)")}</div>
+        <div style="font-size:13px;">From: ${escapeHtml(m.from || "")}</div>
+        <div style="font-size:13px;">To: ${escapeHtml(m.to || "")}</div>
+        <div style="font-size:13px;color:var(--text-dim);">${escapeHtml(snippet(m))}</div>
+      </div>`
+    )
+    .join("");
+}
+
+async function renderAdminUsers() {
   const res = await authedFetch("/api/admin/users");
   const data = await res.json();
   const slot = document.getElementById("admin-slot");
