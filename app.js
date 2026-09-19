@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 // Change this to your deployed Worker URL.
-const WORKER_URL = "https://uno.csm-mohasin.workers.dev";
+const WORKER_URL = "https://REPLACE_WITH_YOUR_WORKER.workers.dev";
 
 const auth = getAuth(firebaseApp);
 const provider = new GoogleAuthProvider();
@@ -41,7 +41,9 @@ const senderNameStatus = document.getElementById("sender-name-status");
 /* -------------------------------- state ----------------------------------- */
 
 let currentAlias = "";
+let currentAliases = [];
 let currentSenderName = "";
+let isAdmin = false;
 let displayNameOfUser = "";
 let inboxCache = null; // raw messages array from /api/inbox (all folders)
 let sentCache = null; // raw messages array from /api/sent
@@ -71,7 +73,9 @@ onAuthStateChanged(auth, async (user) => {
       }
 
       currentAlias = data.alias;
+      currentAliases = data.aliases || [data.alias];
       currentSenderName = data.senderName || "";
+      isAdmin = !!data.isAdmin;
       senderNameInput.value = currentSenderName;
       setupAppShell();
       showScreen(appScreen);
@@ -153,7 +157,9 @@ claimBtn.addEventListener("click", async () => {
   }
 
   currentAlias = data.alias;
+  currentAliases = data.aliases || [data.alias];
   currentSenderName = data.senderName || "";
+  isAdmin = !!data.isAdmin;
   senderNameInput.value = currentSenderName;
   setupAppShell();
   showScreen(appScreen);
@@ -168,6 +174,7 @@ function setupAppShell() {
   drawerAvatar.textContent = initial;
   drawerName.textContent = displayNameOfUser;
   drawerAlias.textContent = currentAlias;
+  document.getElementById("admin-drawer-btn").classList.toggle("hidden", !isAdmin);
 }
 
 function initials(name) {
@@ -263,6 +270,10 @@ async function render() {
     return;
   }
   const view = params.get("view") || "inbox";
+  if (view === "admin") {
+    await renderAdmin();
+    return;
+  }
   await renderList(view);
 }
 
@@ -350,7 +361,7 @@ async function renderList(view) {
   slot.querySelectorAll("[data-act]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      await handleAction(btn.dataset.act, btn.dataset.id, view);
+      await handleAction(btn.dataset.act, btn.dataset.id, view, btn.dataset.alias);
     });
   });
 }
@@ -369,16 +380,16 @@ function messageCardHtml(m, view) {
   let actions = "";
   if (view === "inbox") {
     actions = `
-      <button class="chip-btn" data-act="archive" data-id="${m.id}">Archive</button>
-      <button class="chip-btn danger" data-act="trash" data-id="${m.id}">Trash</button>`;
+      <button class="chip-btn" data-act="archive" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Archive</button>
+      <button class="chip-btn danger" data-act="trash" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Trash</button>`;
   } else if (view === "archive") {
     actions = `
-      <button class="chip-btn success" data-act="restore" data-id="${m.id}">Unarchive</button>
-      <button class="chip-btn danger" data-act="trash" data-id="${m.id}">Trash</button>`;
+      <button class="chip-btn success" data-act="restore" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Unarchive</button>
+      <button class="chip-btn danger" data-act="trash" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Trash</button>`;
   } else if (view === "trash") {
     actions = `
-      <button class="chip-btn success" data-act="restore" data-id="${m.id}">Restore</button>
-      <button class="chip-btn danger" data-act="delete" data-id="${m.id}">Delete forever</button>`;
+      <button class="chip-btn success" data-act="restore" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Restore</button>
+      <button class="chip-btn danger" data-act="delete" data-id="${m.id}" data-alias="${escapeAttr(m.alias || "")}">Delete forever</button>`;
   }
 
   return `
@@ -396,24 +407,24 @@ function messageCardHtml(m, view) {
     </div>`;
 }
 
-async function handleAction(act, id, view) {
-  if (act === "archive") await updateMessage(id, { folder: "archive" });
-  if (act === "trash") await updateMessage(id, { folder: "trash" });
-  if (act === "restore") await updateMessage(id, { folder: "inbox" });
+async function handleAction(act, id, view, alias) {
+  if (act === "archive") await updateMessage(id, { folder: "archive" }, alias);
+  if (act === "trash") await updateMessage(id, { folder: "trash" }, alias);
+  if (act === "restore") await updateMessage(id, { folder: "inbox" }, alias);
   if (act === "delete") {
     if (!confirm("Permanently delete this message?")) return;
-    await deleteMessageForever(id);
+    await deleteMessageForever(id, alias);
   }
   await renderList(view);
 }
 
-async function updateMessage(id, changes) {
-  await authedFetch("/api/message/update", { method: "POST", body: JSON.stringify({ id, ...changes }) });
+async function updateMessage(id, changes, alias) {
+  await authedFetch("/api/message/update", { method: "POST", body: JSON.stringify({ id, alias, ...changes }) });
   applyLocalChange(id, changes);
 }
 
-async function deleteMessageForever(id) {
-  await authedFetch("/api/message/delete", { method: "POST", body: JSON.stringify({ id }) });
+async function deleteMessageForever(id, alias) {
+  await authedFetch("/api/message/delete", { method: "POST", body: JSON.stringify({ id, alias }) });
   if (inboxCache) inboxCache = inboxCache.filter((m) => m.id !== id);
 }
 
@@ -435,7 +446,90 @@ function skeletonHtml() {
     .join("");
 }
 
-/* ---------------------------------- detail view -------------------------------- */
+/* ----------------------------------- admin panel -------------------------------- */
+
+async function renderAdmin() {
+  highlightDrawer("admin");
+  contentEl.innerHTML = `<div class="folder-title">Admin</div><div id="admin-slot">${skeletonHtml()}</div>`;
+
+  const res = await authedFetch("/api/admin/users");
+  const data = await res.json();
+  const slot = document.getElementById("admin-slot");
+
+  if (!res.ok) {
+    slot.innerHTML = `<div class="empty-state">${escapeHtml(data.error || "Failed to load users")}</div>`;
+    return;
+  }
+
+  slot.innerHTML = data.users
+    .map(
+      (u) => `
+      <div class="detail-card" style="margin-bottom:12px;">
+        <div style="font-weight:700;font-size:14px;">${escapeHtml(u.senderName || "(no name)")}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;word-break:break-all;">uid: ${escapeHtml(u.uid)}</div>
+        <div style="font-size:13px;margin-bottom:10px;">
+          ${u.aliases
+            .map(
+              (a) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;">
+              <span>${escapeHtml(a)}${a === u.alias ? " <b>(primary)</b>" : ""}</span>
+              ${a !== u.alias ? `<button class="chip-btn danger" data-remove-uid="${escapeAttr(u.uid)}" data-remove-alias="${escapeAttr(a)}">Remove</button>` : ""}
+            </div>`
+            )
+            .join("")}
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input type="text" class="field-input" style="padding:10px;" placeholder="নতুন alias (বাংলা/ইংরেজি)" data-add-input="${escapeAttr(u.uid)}" />
+          <button class="chip-btn success" data-add-uid="${escapeAttr(u.uid)}" style="flex-shrink:0;">Add alias</button>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <input type="text" class="field-input" style="padding:10px;" placeholder="Primary alias পরিবর্তন করো" data-set-input="${escapeAttr(u.uid)}" />
+          <button class="chip-btn" data-set-uid="${escapeAttr(u.uid)}" style="flex-shrink:0;">Set primary</button>
+        </div>
+      </div>`
+    )
+    .join("");
+
+  slot.querySelectorAll("[data-add-uid]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const uid = btn.dataset.addUid;
+      const input = slot.querySelector(`[data-add-input="${CSS.escape(uid)}"]`);
+      const alias = input.value.trim();
+      if (!alias) return;
+      const r = await authedFetch("/api/admin/add-alias", { method: "POST", body: JSON.stringify({ uid, alias }) });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || "Failed"); return; }
+      renderAdmin();
+    });
+  });
+
+  slot.querySelectorAll("[data-set-uid]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const uid = btn.dataset.setUid;
+      const input = slot.querySelector(`[data-set-input="${CSS.escape(uid)}"]`);
+      const alias = input.value.trim();
+      if (!alias) return;
+      const r = await authedFetch("/api/admin/set-alias", { method: "POST", body: JSON.stringify({ uid, alias }) });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || "Failed"); return; }
+      renderAdmin();
+    });
+  });
+
+  slot.querySelectorAll("[data-remove-uid]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const uid = btn.dataset.removeUid;
+      const alias = btn.dataset.removeAlias;
+      if (!confirm(`Remove alias ${alias}?`)) return;
+      const r = await authedFetch("/api/admin/remove-alias", { method: "POST", body: JSON.stringify({ uid, alias }) });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || "Failed"); return; }
+      renderAdmin();
+    });
+  });
+}
+
+
 
 async function renderDetail(params) {
   const id = params.get("email");
@@ -455,7 +549,7 @@ async function renderDetail(params) {
   }
 
   if (!isSent && !message.read) {
-    updateMessage(id, { read: true });
+    updateMessage(id, { read: true }, message.alias);
   }
 
   const person = isSent ? message.to : message.from;
@@ -502,12 +596,12 @@ async function renderDetail(params) {
   contentEl.querySelectorAll("[data-act]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const act = btn.dataset.act;
-      if (act === "archive") await updateMessage(id, { folder: "archive" });
-      if (act === "trash") await updateMessage(id, { folder: "trash" });
-      if (act === "restore") await updateMessage(id, { folder: "inbox" });
+      if (act === "archive") await updateMessage(id, { folder: "archive" }, message.alias);
+      if (act === "trash") await updateMessage(id, { folder: "trash" }, message.alias);
+      if (act === "restore") await updateMessage(id, { folder: "inbox" }, message.alias);
       if (act === "delete") {
         if (!confirm("Permanently delete this message?")) return;
-        await deleteMessageForever(id);
+        await deleteMessageForever(id, message.alias);
         navigate({ view: "trash" });
         return;
       }
@@ -541,9 +635,20 @@ async function renderCompose(params) {
     }
   }
 
+  const fromPicker =
+    currentAliases.length > 1
+      ? `<div class="field-group">
+          <select id="compose-from" class="field-input" style="padding-top:14px;">
+            ${currentAliases.map((a) => `<option value="${escapeAttr(a)}" ${a === currentAlias ? "selected" : ""}>${escapeHtml(a)}</option>`).join("")}
+          </select>
+          <label class="field-label" style="top:5px;font-size:11px;color:var(--accent-1);font-weight:600;">From</label>
+        </div>`
+      : "";
+
   contentEl.innerHTML = `
     <div class="detail-header"><button class="icon-btn" id="back-btn">&larr;</button><h2>${mode === "reply" ? "Reply" : "New message"}</h2></div>
     <div class="compose-card">
+      ${fromPicker}
       <div class="field-group">
         <input id="compose-to" class="field-input" type="email" placeholder=" " value="${escapeAttr(prefillTo)}" />
         <label class="field-label">To</label>
@@ -600,8 +705,11 @@ async function renderCompose(params) {
     statusEl.textContent = "Sending...";
     statusEl.className = "status-text";
 
+    const fromEl = document.getElementById("compose-from");
+    const fromAlias = fromEl ? fromEl.value : undefined;
+
     const res = await withSpinner(() =>
-      authedFetch("/api/send", { method: "POST", body: JSON.stringify({ to, subject, text, html }) })
+      authedFetch("/api/send", { method: "POST", body: JSON.stringify({ to, subject, text, html, fromAlias }) })
     );
     const data = await res.json();
 
